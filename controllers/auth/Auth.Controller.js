@@ -41,13 +41,18 @@ export const signUp = async (req, res) => {
     }
 
     /* ------------------ Check if Email Exists ------------------ */
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
+   const existingUser = await prisma.user.findFirst({
+  where: {
+    OR: [
+      { email: email },
+      { username: username }
+    ]
+  }
+});
 
     if (existingUser) {
       return res.status(400).json({
-        message: "Email already exists.",
+        message: "Email or username already exists.",
       });
     }
 
@@ -146,6 +151,7 @@ export const logIn = async (req, res) => {
       {
         id: user.id,
         email: user.email,
+        role: "user",
       },
       process.env.JWT_SECRET,
       { expiresIn: "7d" },
@@ -174,6 +180,7 @@ export const logIn = async (req, res) => {
         isVerified: user.isVerified,
         createdAt: user.createdAt,
         chronicDiseases: user.chronicDiseases,
+        accessToken:accessToken,
       },
     });
   } catch (error) {
