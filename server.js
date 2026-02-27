@@ -9,9 +9,7 @@ import authRoutes from "./controllers/auth/Auth.Routes.js";
 import diseasesRoutes from "./controllers/diseases/Diseases.Routes.js";
 import mealRoutes from "./controllers/meal/Meal.Routes.js";
 import usersRoutes from "./controllers/users/Users.Routes.js";
-import planRoutes from "./controllers/Plan/Plan.Routes.js";
-
-
+import planRoutes from "./controllers/plan/Plan.Routes.js";
 
 
 const app = express();
