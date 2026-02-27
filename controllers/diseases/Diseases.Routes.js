@@ -1,6 +1,5 @@
 import express from "express";
 import { createChronicDisease, deleteChronicDisease, getAllChronicDiseases, getChronicDiseaseById, updateChronicDisease, } from "./Diseases.Controller.js";
-import { verifyAnyoneHasAccount } from "../../middleware/verifyToken.js";
 
 const router = express.Router();
 
