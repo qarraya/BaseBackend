@@ -22,7 +22,7 @@ export const signUp = async (req, res) => {
       height,
       goal,
       chronicDiseasesIds, // optional array
-    } = req.body;
+    } = req.body
 
     /* ------------------ Required Fields Validation ------------------ */
     if (
