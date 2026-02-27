@@ -124,12 +124,14 @@ export const logIn = async (req, res) => {
     }
 
     /* ------------------ Find User ------------------ */
-    const user = await prisma.user.findUnique({
-      where: { username },
-      include: {
-        chronicDiseases: true,
-      },
-    });
+    const user = await prisma.user.findFirst({
+  where: {
+    username: username
+  },
+  include: {
+    chronicDiseases: true,
+  },
+});
 
     if (!user) {
       return res.status(400).json({
