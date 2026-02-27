@@ -1,0 +1,210 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum Goal {
+  LOSE
+  MAINTAIN
+  GAIN
+}
+
+enum ChronicDiseasesType {
+  DISEASE
+  ALLERGY
+}
+
+enum MealTime {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+enum ActivityLevelEnum {
+  SEDENTARY
+  LIGHT
+  MODERATE
+  ACTIVE
+  VERY_ACTIVE
+}
+
+enum NotificationType {
+  INFO
+  MESSAGE
+  REMINDER
+  WARNING
+  SUCCESS
+  ERROR
+}
+
+////////////////////////////
+/// ADMIN
+////////////////////////////
+
+model Admin {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password      String
+  lastLogin     DateTime?
+  createdAt     DateTime       @default(now())
+}
+
+////////////////////////////
+/// USERS
+////////////////////////////
+
+model User {
+  id            String            @id @default(uuid())
+  username      String
+  email         String            @unique
+  password      String
+  gender        Gender
+  currentWeight Float
+  activityLevel ActivityLevelEnum
+  height        Float
+  goal          Goal
+  isVerified    Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+
+  chronicDiseases UserChronicDiseases[]
+  plans           Plan[]
+  progress        Progress[]
+  notifications   Notification[]
+}
+
+////////////////////////////
+/// ChronicDiseases
+////////////////////////////
+
+model ChronicDiseases {
+  id   Int           @id @default(autoincrement())
+  name String
+  type ChronicDiseasesType
+
+  users UserChronicDiseases[]
+  meals MealChronicDiseases[]
+}
+
+////////////////////////////
+/// USER ↔ CONDITIONS (M-M)
+////////////////////////////
+
+model UserChronicDiseases {
+  userId      String
+  conditionId Int
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chronicDiseases ChronicDiseases @relation(fields: [conditionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, conditionId])
+}
+
+////////////////////////////
+/// MEALS
+////////////////////////////
+
+model Meal {
+  id        String   @id @default(uuid())
+  name      String
+  calories  Int
+  time      MealTime
+  createdAt DateTime @default(now())
+
+  chromicDiseases MealChronicDiseases[]
+  planMeals       PlanMeal[]
+}
+
+////////////////////////////
+/// MEAL ↔ ChronicDiseases (M-M)
+////////////////////////////
+
+model MealChronicDiseases {
+  mealId            String
+  chronicDiseasesId Int
+
+  meal            Meal            @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  chronicDiseases ChronicDiseases @relation(fields: [chronicDiseasesId], references: [id], onDelete: Cascade)
+
+  @@id([mealId, chronicDiseasesId])
+}
+
+////////////////////////////
+/// PLANS
+////////////////////////////
+
+model Plan {
+  id            String   @id @default(uuid())
+  totalCalories Int
+  startDate     DateTime
+  endDate       DateTime
+  createdAt     DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  meals PlanMeal[]
+}
+
+////////////////////////////
+/// PLAN MEALS
+////////////////////////////
+
+
+model PlanMeal {
+  id        String   @id @default(uuid())
+  dayNumber Int
+  mealTime  MealTime
+
+  planId String
+  mealId String
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  meal Meal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+}
+
+////////////////////////////
+/// PROGRESS TRACKING
+////////////////////////////
+
+model Progress {
+  id             String   @id @default(uuid())
+  newWeight      Float
+  previousWeight Float
+  date           DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+////////////////////////////
+/// NOTIFICATIONS
+////////////////////////////
+
+model Notification {
+  id        String           @id @default(uuid())
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
