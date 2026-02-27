@@ -114,18 +114,18 @@ export const signUp = async (req, res) => {
 
 export const logIn = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
     /* ------------------ Validation ------------------ */
-    if (!email || !password) {
+    if (!username || !password) {
       return res.status(400).json({
-        message: "Email and password are required.",
+        message: "Username and password are required.",
       });
     }
 
     /* ------------------ Find User ------------------ */
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { username },
       include: {
         chronicDiseases: true,
       },
@@ -151,6 +151,7 @@ export const logIn = async (req, res) => {
       {
         id: user.id,
         email: user.email,
+        username: user.username,
         role: "user",
       },
       process.env.JWT_SECRET,
