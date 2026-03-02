@@ -25,18 +25,19 @@ export const signUp = async (req, res) => {
     } = req.body
 
     /* ------------------ Required Fields Validation ------------------ */
-    if (
-      !username ||
-      !email ||
-      !password ||
-      !gender ||
-      currentWeight === undefined ||
-      !activityLevel ||
-      height === undefined ||
-      !goal
-    ) {
+    const missingFields = [];
+    if (!username) missingFields.push("username");
+    if (!email) missingFields.push("email");
+    if (!password) missingFields.push("password");
+    if (!gender) missingFields.push("gender");
+    if (currentWeight === undefined || currentWeight === null) missingFields.push("currentWeight");
+    if (!activityLevel) missingFields.push("activityLevel");
+    if (height === undefined || height === null) missingFields.push("height");
+    if (!goal) missingFields.push("goal");
+
+    if (missingFields.length > 0) {
       return res.status(400).json({
-        message: "All required fields must be provided.",
+        message: `Validation failed. Missing required fields: ${missingFields.join(", ")}`,
       });
     }
 
