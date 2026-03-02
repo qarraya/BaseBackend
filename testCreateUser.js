@@ -21,11 +21,11 @@ async function main() {
                 goal: "MAINTAIN",
                 isVerified: true,
                 chronicDiseases: {
-                    create: [1, 2].map((id) => ({
+                    create: [{
                         chronicDiseases: {
-                            connect: { id: Number(id) },
+                            connect: { id: 1 }, // الربط مع "السكري"
                         },
-                    })),
+                    }],
                 },
             },
             include: {

@@ -73,13 +73,15 @@ export const signUp = async (req, res) => {
         goal,
         isVerified: true,
 
-        // Always attach Disease ID 1 automatically
+        // Connect chronic diseases if provided in the request
         chronicDiseases: {
-          create: [{
-            chronicDiseases: {
-              connect: { id: 1 },
-            },
-          }],
+          create: (chronicDiseasesIds && Array.isArray(chronicDiseasesIds))
+            ? chronicDiseasesIds.map((id) => ({
+              chronicDiseases: {
+                connect: { id: Number(id) },
+              },
+            }))
+            : [],
         },
       },
       include: {
