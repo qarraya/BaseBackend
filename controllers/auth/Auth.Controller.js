@@ -103,6 +103,7 @@ export const signUp = async (req, res) => {
         height: newUser.height,
         goal: newUser.goal,
         createdAt: newUser.createdAt,
+        chronicDiseases: newUser.chronicDiseases,
       },
     });
   } catch (error) {
