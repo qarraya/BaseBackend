@@ -108,12 +108,12 @@ model ChronicDiseases {
 
 model UserChronicDiseases {
   userId      String
-  conditionId Int
+  chronicdiseasesId Int
 
   user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chronicDiseases ChronicDiseases @relation(fields: [conditionId], references: [id], onDelete: Cascade)
+  chronicDiseases ChronicDiseases @relation(fields: [chronicdiseasesId], references: [id], onDelete: Cascade)
 
-  @@id([userId, conditionId])
+  @@id([userId, chronicdiseasesId])
 }
 
 ////////////////////////////
