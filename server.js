@@ -11,6 +11,7 @@ import mealRoutes from "./controllers/meal/Meal.Routes.js";
 import usersRoutes from "./controllers/users/Users.Routes.js";
 import planRoutes from "./controllers/plan/Plan.Routes.js";
 
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -18,27 +19,22 @@ const PORT = process.env.PORT || 3000;
    CORS CONFIGURATION
 ========================= */
 
-// whitelist ممكن تضيف روابط الفرونت عندك هنا
 const whitelist = [
-  process.env.FRONTEND_URL,     // الرابط النهائي للفرونت على النت
-  "http://localhost:5173",      // تطوير محلي
-  "http://localhost:3000",      // تطوير محلي
+  process.env.FRONTEND_URL,
+  "http://localhost:5173",
+  "http://localhost:3000",
 ];
 
-// cors options مع السماح لكل origin بدون مشكلة للتطبيقات والموبايل
+
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (مثل Postman أو Flutter mobile)
+    // Allow requests with no origin (Postman, mobile apps)
     if (!origin) return callback(null, true);
 
     if (whitelist.includes(origin)) {
       callback(null, true);
     } else {
-      // بدل ما يرجع error يقدر يرجع false أو يسمح بكلشي للاختبار
-      console.warn("Blocked by CORS:", origin);
-      callback(null, true);  // ✅ السماح لأي origin
-      // لو بدك تشدد الامان، استبدل السطر السابق ب:
-      // callback(new Error("Not allowed by CORS"));
+      callback(new Error("Not allowed by CORS"));
     }
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
@@ -46,6 +42,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
 
 /* =========================
    MIDDLEWARES
@@ -64,6 +61,10 @@ app.use("/api/diseases", diseasesRoutes);
 app.use("/api/meal", mealRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/plan", planRoutes);
+
+
+
+
 
 app.get("/", (req, res) => {
   res.status(200).json({
@@ -91,5 +92,4 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-}
-);
+});

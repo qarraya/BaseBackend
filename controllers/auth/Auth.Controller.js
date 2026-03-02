@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import nodemailer from "nodemailer"; 
+import nodemailer from "nodemailer";
 
 dotenv.config();
 
@@ -41,14 +41,14 @@ export const signUp = async (req, res) => {
     }
 
     /* ------------------ Check if Email Exists ------------------ */
-   const existingUser = await prisma.user.findFirst({
-  where: {
-    OR: [
-      { email: email },
-      { username: username }
-    ]
-  }
-});
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: { equals: email, mode: "insensitive" } },
+          { username: { equals: username, mode: "insensitive" } },
+        ],
+      },
+    });
 
     if (existingUser) {
       return res.status(400).json({
@@ -76,12 +76,12 @@ export const signUp = async (req, res) => {
         chronicDiseases:
           Array.isArray(chronicDiseasesIds) && chronicDiseasesIds.length > 0
             ? {
-                create: chronicDiseasesIds.map((id) => ({
-                  chronicDiseases: {
-                    connect: { id: Number(id) },
-                  },
-                })),
-              }
+              create: chronicDiseasesIds.map((id) => ({
+                chronicDiseases: {
+                  connect: { id: Number(id) },
+                },
+              })),
+            }
             : undefined,
       },
       include: {
@@ -125,13 +125,16 @@ export const logIn = async (req, res) => {
 
     /* ------------------ Find User ------------------ */
     const user = await prisma.user.findFirst({
-  where: {
-    username: username
-  },
-  include: {
-    chronicDiseases: true,
-  },
-});
+      where: {
+        OR: [
+          { username: { equals: username, mode: "insensitive" } },
+          { email: { equals: username, mode: "insensitive" } },
+        ],
+      },
+      include: {
+        chronicDiseases: true,
+      },
+    });
 
     if (!user) {
       return res.status(400).json({
@@ -139,7 +142,7 @@ export const logIn = async (req, res) => {
       });
     }
     console.log("Entered password:", password);
-     console.log("Stored password:", user.password);
+    console.log("Stored password:", user.password);
 
     /* ------------------ Compare Password ------------------ */
     const isMatch = await bcrypt.compare(password, user.password);
@@ -166,7 +169,7 @@ export const logIn = async (req, res) => {
     res.cookie("auth_token", accessToken, {
       httpOnly: true,
       secure: true,
-       sameSite: "None",
+      sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -185,7 +188,7 @@ export const logIn = async (req, res) => {
         isVerified: user.isVerified,
         createdAt: user.createdAt,
         chronicDiseases: user.chronicDiseases,
-        accessToken:accessToken,
+        accessToken: accessToken,
       },
     });
   } catch (error) {
