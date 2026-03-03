@@ -74,11 +74,11 @@ model User {
   username      String            @unique
   email         String            @unique
   password      String
-  gender        Gender
-  currentWeight Float
-  activityLevel ActivityLevelEnum
-  height        Float
-  goal          Goal
+  gender        Gender?
+  currentWeight Float?
+  activityLevel ActivityLevelEnum?
+  height        Float?
+  goal          Goal?
   isVerified    Boolean           @default(true)
   createdAt     DateTime          @default(now())
 

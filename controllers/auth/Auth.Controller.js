@@ -16,6 +16,7 @@ export const signUp = async (req, res) => {
       username,
       email,
       password,
+      confirmPassword,
       gender,
       currentWeight,
       activityLevel,
@@ -29,15 +30,18 @@ export const signUp = async (req, res) => {
     if (!username) missingFields.push("username");
     if (!email) missingFields.push("email");
     if (!password) missingFields.push("password");
-    if (!gender) missingFields.push("gender");
-    if (currentWeight === undefined || currentWeight === null) missingFields.push("currentWeight");
-    if (!activityLevel) missingFields.push("activityLevel");
-    if (height === undefined || height === null) missingFields.push("height");
-    if (!goal) missingFields.push("goal");
+    if (!confirmPassword) missingFields.push("confirmPassword");
 
     if (missingFields.length > 0) {
       return res.status(400).json({
         message: `Validation failed. Missing required fields: ${missingFields.join(", ")}`,
+      });
+    }
+
+    /* ------------------ Password Confirmation Check ------------------ */
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        message: "Passwords do not match.",
       });
     }
 
@@ -66,11 +70,11 @@ export const signUp = async (req, res) => {
         username,
         email,
         password: hashedPassword,
-        gender,
-        currentWeight: Number(currentWeight),
-        activityLevel,
-        height: Number(height),
-        goal,
+        gender: gender || null,
+        currentWeight: currentWeight ? Number(currentWeight) : null,
+        activityLevel: activityLevel || null,
+        height: height ? Number(height) : null,
+        goal: goal || null,
         isVerified: true,
 
         // Connect chronic diseases if provided in the request
@@ -107,8 +111,25 @@ export const signUp = async (req, res) => {
     });
   } catch (error) {
     console.error("SignUp Error:", error);
+
+    // Handle Prisma unique constraint errors (e.g., duplicate email/username)
+    if (error.code === "P2002") {
+      const field = error.meta?.target?.join(", ");
+      return res.status(400).json({
+        message: `Duplicate value for field: ${field}. Please use a different one.`,
+      });
+    }
+
+    // Handle Prisma connect errors (e.g., disease ID doesn't exist)
+    if (error.code === "P2025") {
+      return res.status(400).json({
+        message: "One or more Chronic Disease IDs provided do not exist in the database.",
+      });
+    }
+
     return res.status(500).json({
       message: "Internal server error.",
+      error: error.message, // Helpful for debugging
     });
   }
 };
