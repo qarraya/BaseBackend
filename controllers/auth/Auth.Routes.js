@@ -11,7 +11,7 @@ import {
 } from "./Auth.Controller.js";
 const router = express.Router();
 
-router.post('/', signUp);
+router.post('/signup', signUp);
 router.post('/login', logIn);
 router.post('/logout', logOut);
 router.post('/sendVerificationCode', sendVerificationCode);
