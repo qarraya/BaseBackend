@@ -18,6 +18,7 @@ export const signUp = async (req, res) => {
       password,
       confirmPassword,
       gender,
+      age,
       currentWeight,
       activityLevel,
       height,
@@ -64,50 +65,58 @@ export const signUp = async (req, res) => {
     /* ------------------ Hash Password ------------------ */
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    /* ------------------ Create User ------------------ */
-    const newUser = await prisma.user.create({
-      data: {
-        username,
-        email,
-        password: hashedPassword,
-        gender: gender || null,
-        currentWeight: currentWeight ? Number(currentWeight) : null,
-        activityLevel: activityLevel || null,
-        height: height ? Number(height) : null,
-        goal: goal || null,
-        isVerified: true,
-
-        // Connect chronic diseases if provided in the request
-        chronicDiseases: {
-          create: (chronicDiseasesIds && Array.isArray(chronicDiseasesIds))
-            ? chronicDiseasesIds.map((id) => ({
-              chronicDiseases: {
-                connect: { id: Number(id) },
-              },
-            }))
-            : [],
+    /* ------------------ Create User and Profile (Transaction) ------------------ */
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          username,
+          email,
+          password: hashedPassword,
+          isVerified: true,
         },
-      },
-      include: {
-        chronicDiseases: true,
-      },
+      });
+
+      const profile = await tx.profile.create({
+        data: {
+          userId: user.id,
+          gender,
+          age: age ? Number(age) : null,
+          height: height ? Number(height) : null,
+          currentWeight: currentWeight ? Number(currentWeight) : null,
+          goal,
+          activityLevel,
+          chronicDiseases: {
+            create: (chronicDiseasesIds && Array.isArray(chronicDiseasesIds))
+              ? chronicDiseasesIds.map((id) => ({
+                chronicDisease: {
+                  connect: { id: Number(id) },
+                },
+              }))
+              : [],
+          },
+        },
+        include: {
+          chronicDiseases: {
+            include: {
+              chronicDisease: true,
+            },
+          },
+        },
+      });
+
+      return { user, profile };
     });
 
     /* ------------------ Success Response ------------------ */
     return res.status(201).json({
-      message: "User account created successfully.",
+      message: "User and Profile created successfully.",
       user: {
-        id: newUser.id,
-        username: newUser.username,
-        email: newUser.email,
-        gender: newUser.gender,
-        currentWeight: newUser.currentWeight,
-        activityLevel: newUser.activityLevel,
-        height: newUser.height,
-        goal: newUser.goal,
-        createdAt: newUser.createdAt,
-        chronicDiseases: newUser.chronicDiseases,
+        id: result.user.id,
+        username: result.user.username,
+        email: result.user.email,
+        createdAt: result.user.createdAt,
       },
+      profile: result.profile,
     });
   } catch (error) {
     console.error("SignUp Error:", error);
@@ -154,7 +163,15 @@ export const logIn = async (req, res) => {
         ],
       },
       include: {
-        chronicDiseases: true,
+        profile: {
+          include: {
+            chronicDiseases: {
+              include: {
+                chronicDisease: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -202,14 +219,9 @@ export const logIn = async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
-        gender: user.gender,
-        currentWeight: user.currentWeight,
-        activityLevel: user.activityLevel,
-        height: user.height,
-        goal: user.goal,
         isVerified: user.isVerified,
         createdAt: user.createdAt,
-        chronicDiseases: user.chronicDiseases,
+        profile: user.profile,
         accessToken: accessToken,
       },
     });
@@ -245,9 +257,13 @@ export const getUserData = async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
       include: {
-        chronicDiseases: {
+        profile: {
           include: {
-            chronicDiseases: true,
+            chronicDiseases: {
+              include: {
+                chronicDisease: true,
+              },
+            },
           },
         },
         plans: true,
@@ -269,14 +285,9 @@ export const getUserData = async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
-        gender: user.gender,
-        currentWeight: user.currentWeight,
-        activityLevel: user.activityLevel,
-        height: user.height,
-        goal: user.goal,
         isVerified: user.isVerified,
         createdAt: user.createdAt,
-        chronicDiseases: user.chronicDiseases,
+        profile: user.profile,
         plans: user.plans,
         progress: user.progress,
         notifications: user.notifications,

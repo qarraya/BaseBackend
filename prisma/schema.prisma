@@ -74,45 +74,62 @@ model User {
   username      String            @unique
   email         String            @unique
   password      String
-  gender        Gender?
-  currentWeight Float?
-  activityLevel ActivityLevelEnum?
-  height        Float?
-  goal          Goal?
   isVerified    Boolean           @default(true)
   createdAt     DateTime          @default(now())
 
-  chronicDiseases UserChronicDiseases[]
+  profile         Profile?
   plans           Plan[]
   progress        Progress[]
   notifications   Notification[]
 }
+
+
+//////////////////////////
+/////////////////////////
+//      Profile        //
+/////////////////////////
+model Profile {
+  id              Int      @id @default(autoincrement())
+  userId          String   @unique
+  gender          Gender?
+  age             Int?
+  height          Float?
+  currentWeight   Float?
+  goal            Goal?
+  activityLevel   ActivityLevelEnum?
+  chronicDiseases ProfileChronicDiseases[]
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+
 
 ////////////////////////////
 /// ChronicDiseases
 ////////////////////////////
 
 model ChronicDiseases {
-  id   Int           @id @default(autoincrement())
-  name String
-  type ChronicDiseasesType
+  id     Int                     @id @default(autoincrement())
+  name   String
+  type   ChronicDiseasesType
 
-  users UserChronicDiseases[]
-  meals MealChronicDiseases[]
+  meals    MealChronicDiseases[]
+  profiles ProfileChronicDiseases[]  
 }
 
-////////////////////////////
-/// USER ↔ CONDITIONS (M-M)
-////////////////////////////
+///////////////////////////
+//   ProfileChronicDiseases
+//////////////////////////
+model ProfileChronicDiseases {
+  id                Int               @id @default(autoincrement())
 
-model UserChronicDiseases {
-  userId      String
-  chronicdiseasesId Int
+  profileId         Int
+  chronicDiseaseId  Int
 
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chronicDiseases ChronicDiseases @relation(fields: [chronicdiseasesId], references: [id], onDelete: Cascade)
+  profile           Profile           @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  chronicDisease    ChronicDiseases   @relation(fields: [chronicDiseaseId], references: [id], onDelete: Cascade)
 
-  @@id([userId, chronicdiseasesId])
+  @@unique([profileId, chronicDiseaseId])
 }
 
 ////////////////////////////
