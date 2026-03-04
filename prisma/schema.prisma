@@ -75,6 +75,8 @@ model User {
   email         String            @unique
   password      String
   isVerified    Boolean           @default(true)
+  resetCode     String?           // To store the 6-digit code
+  resetCodeExpires DateTime?      // To store the expiration time
   createdAt     DateTime          @default(now())
 
   profile         Profile?
