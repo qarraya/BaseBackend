@@ -8,6 +8,7 @@ export const createProfile = async (req, res) => {
   try {
     const {
       userId,
+      email,
       gender,
       age,
       height,
@@ -17,13 +18,26 @@ export const createProfile = async (req, res) => {
       chronicDiseasesIds,
     } = req.body;
 
-    if (!userId) {
-      return res.status(400).json({ message: "userId is required to create a profile" });
+    let targetUserId = userId;
+
+    if (!targetUserId && email) {
+      const user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+      });
+      if (user) {
+        targetUserId = user.id;
+      } else {
+        return res.status(404).json({ message: "User with this email not found" });
+      }
+    }
+
+    if (!targetUserId) {
+      return res.status(400).json({ message: "userId or email is required to create a profile" });
     }
 
     const newProfile = await prisma.profile.create({
       data: {
-        userId,
+        userId: targetUserId,
         gender,
         age: age ? Number(age) : null,
         height: height ? Number(height) : null,
