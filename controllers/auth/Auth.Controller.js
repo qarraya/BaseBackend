@@ -455,8 +455,8 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
     });
 
     if (user) {
@@ -521,8 +521,8 @@ export const verifyResetCode = async (req, res) => {
       });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
     });
 
     if (!user || user.resetCode !== code || !user.resetCodeExpires || new Date() > user.resetCodeExpires) {
@@ -552,8 +552,8 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
     });
 
     if (!user || user.resetCode !== code || !user.resetCodeExpires || new Date() > user.resetCodeExpires) {
