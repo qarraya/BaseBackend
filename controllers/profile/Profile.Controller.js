@@ -6,9 +6,8 @@ const prisma = new PrismaClient();
 /* ------------------ Create Profile ------------------ */
 export const createProfile = async (req, res) => {
   try {
+    const userId = req.user.id; // Use authenticated userId
     const {
-      userId,
-      email,
       gender,
       age,
       height,
@@ -18,41 +17,31 @@ export const createProfile = async (req, res) => {
       chronicDiseasesIds,
     } = req.body;
 
-    let targetUserId = userId;
+    const profileData = {
+      gender,
+      age: age ? Number(age) : null,
+      height: height ? Number(height) : null,
+      currentWeight: currentWeight ? Number(currentWeight) : null,
+      goal,
+      activityLevel,
+      chronicDiseases: {
+        deleteMany: {}, // Clear existing diseases to re-add them
+        create: (chronicDiseasesIds && Array.isArray(chronicDiseasesIds))
+          ? chronicDiseasesIds.map((id) => ({
+            chronicDisease: {
+              connect: { id: Number(id) },
+            },
+          }))
+          : [],
+      },
+    };
 
-    if (!targetUserId && email) {
-      const user = await prisma.user.findUnique({
-        where: { email: email.toLowerCase() },
-      });
-      if (user) {
-        targetUserId = user.id;
-      } else {
-        return res.status(404).json({ message: "User with this email not found" });
-      }
-    }
-
-    if (!targetUserId) {
-      return res.status(400).json({ message: "userId or email is required to create a profile" });
-    }
-
-    const newProfile = await prisma.profile.create({
-      data: {
-        userId: targetUserId,
-        gender,
-        age: age ? Number(age) : null,
-        height: height ? Number(height) : null,
-        currentWeight: currentWeight ? Number(currentWeight) : null,
-        goal,
-        activityLevel,
-        chronicDiseases: {
-          create: (chronicDiseasesIds && Array.isArray(chronicDiseasesIds))
-            ? chronicDiseasesIds.map((id) => ({
-              chronicDisease: {
-                connect: { id: Number(id) },
-              },
-            }))
-            : [],
-        },
+    const profile = await prisma.profile.upsert({
+      where: { userId },
+      update: profileData,
+      create: {
+        userId,
+        ...profileData,
       },
       include: {
         chronicDiseases: {
@@ -64,8 +53,8 @@ export const createProfile = async (req, res) => {
     });
 
     res.status(201).json({
-      message: "Profile created successfully",
-      profile: newProfile,
+      message: "Profile saved successfully",
+      profile,
     });
   } catch (error) {
     console.error("CreateProfile Error:", error);

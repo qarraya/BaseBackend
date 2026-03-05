@@ -1,29 +1,29 @@
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 
-const verifyAnyoneHasAccount = (req, res, next) => {
-    const accessToken = req.cookies.accessToken;
+dotenv.config();
 
-    if (!accessToken) {
-        return res.status(403).json({ message: 'You must be logged in.' });
+export const verifyAnyoneHasAccount = (req, res, next) => {
+    const token = req.cookies.auth_token;
+
+    if (!token) {
+        return res.status(403).json({ message: "You must be logged in." });
     }
 
-    jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET, (err, decoded) => {
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
         if (err) {
-            return res.status(401).json({ message: 'Invalid or expired access token.' });
+            return res.status(401).json({ message: "Invalid or expired access token." });
         }
 
-        if (decoded && decoded.id && decoded.email && decoded.role) {
-            if(decoded.role==="user" || decoded.role==="admin"){
+        if (decoded && decoded.id) {
+            if (decoded.role === "user" || decoded.role === "admin") {
+                req.user = decoded; // Attach decoded info to req.user
                 next();
-            }else{
-                return res.status(403).json({ message: 'Access denied, You should be loged in.' });
+            } else {
+                return res.status(403).json({ message: "Access denied. You should be logged in." });
             }
-            
+        } else {
+            return res.status(401).json({ message: "Invalid token structure." });
         }
     });
-}
-
-module.exports = {
-    verifyAnyoneHasAccount,
 };
