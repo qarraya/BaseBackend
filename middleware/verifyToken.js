@@ -4,7 +4,16 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const verifyAnyoneHasAccount = (req, res, next) => {
-    const token = req.cookies.auth_token;
+    let token = req.cookies?.auth_token;
+
+    // Also check the Authorization header (common in Postman/mobile)
+    if (!token && req.headers.authorization) {
+        if (req.headers.authorization.startsWith("Bearer ")) {
+            token = req.headers.authorization.split(" ")[1];
+        } else {
+            token = req.headers.authorization;
+        }
+    }
 
     if (!token) {
         return res.status(403).json({ message: "You must be logged in." });

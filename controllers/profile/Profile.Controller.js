@@ -17,31 +17,38 @@ export const createProfile = async (req, res) => {
       chronicDiseasesIds,
     } = req.body;
 
-    const profileData = {
+    const commonData = {
       gender,
       age: age ? Number(age) : null,
       height: height ? Number(height) : null,
       currentWeight: currentWeight ? Number(currentWeight) : null,
       goal,
       activityLevel,
-      chronicDiseases: {
-        deleteMany: {}, // Clear existing diseases to re-add them
-        create: (chronicDiseasesIds && Array.isArray(chronicDiseasesIds))
-          ? chronicDiseasesIds.map((id) => ({
-            chronicDisease: {
-              connect: { id: Number(id) },
-            },
-          }))
-          : [],
-      },
     };
+
+    const chronicDiseasesCreate = (chronicDiseasesIds && Array.isArray(chronicDiseasesIds))
+      ? chronicDiseasesIds.map((id) => ({
+        chronicDisease: {
+          connect: { id: Number(id) },
+        },
+      }))
+      : [];
 
     const profile = await prisma.profile.upsert({
       where: { userId },
-      update: profileData,
+      update: {
+        ...commonData,
+        chronicDiseases: {
+          deleteMany: {}, // Clear existing only on update
+          create: chronicDiseasesCreate,
+        },
+      },
       create: {
         userId,
-        ...profileData,
+        ...commonData,
+        chronicDiseases: {
+          create: chronicDiseasesCreate, // No deleteMany on create
+        },
       },
       include: {
         chronicDiseases: {
@@ -96,15 +103,48 @@ export const getAllProfiles = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const { id } = req.params;
-    const data = req.body;
+    const {
+      gender,
+      age,
+      height,
+      currentWeight,
+      goal,
+      activityLevel,
+      chronicDiseasesIds,
+    } = req.body;
+
+    const updateData = {
+      gender,
+      age: age ? Number(age) : undefined,
+      height: height ? Number(height) : undefined,
+      currentWeight: currentWeight ? Number(currentWeight) : undefined,
+      goal,
+      activityLevel,
+    };
+
+    // Only update chronicDiseases if the field is provided in the request
+    if (chronicDiseasesIds !== undefined) {
+      updateData.chronicDiseases = {
+        deleteMany: {}, // Clear existing associations
+        create: (chronicDiseasesIds && Array.isArray(chronicDiseasesIds))
+          ? chronicDiseasesIds.map((id) => ({
+            chronicDisease: {
+              connect: { id: Number(id) },
+            },
+          }))
+          : [],
+      };
+    }
 
     const updatedProfile = await prisma.profile.update({
       where: { id: Number(id) },
-      data: {
-        ...data,
-        age: data.age ? Number(data.age) : undefined,
-        height: data.height ? Number(data.height) : undefined,
-        currentWeight: data.currentWeight ? Number(data.currentWeight) : undefined,
+      data: updateData,
+      include: {
+        chronicDiseases: {
+          include: {
+            chronicDisease: true,
+          },
+        },
       },
     });
 
