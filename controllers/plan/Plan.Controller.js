@@ -40,7 +40,13 @@ export const createPlan = async (req, res) => {
     // جلب بيانات المستخدم مع الملف الشخصي لحساب السعرات
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { profile: true }
+      include: {
+        profile: {
+          include: {
+            chronicDiseases: true
+          }
+        }
+      }
     });
 
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -87,14 +93,28 @@ export const createPlan = async (req, res) => {
     const diffTime = Math.abs(eDate - sDate);
     const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-    // جلب كل الوجبات المتاحة في قاعدة البيانات
-    const allMeals = await prisma.meal.findMany();
+    // استخراج الأمراض التي يعاني منها المستخدم (array of IDs)
+    const userChronicDiseasesIds = profile.chronicDiseases.map(cd => cd.chronicDiseaseId);
 
-    // تقسيم الوجبات حسب نوعها
-    const breakfasts = allMeals.filter(m => m.time === "BREAKFAST");
-    const lunches = allMeals.filter(m => m.time === "LUNCH");
-    const dinners = allMeals.filter(m => m.time === "DINNER");
-    const snacks = allMeals.filter(m => m.time === "SNACK");
+    // جلب كل الوجبات المتاحة في قاعدة البيانات مع الأمراض الممنوعة عنها
+    const allMeals = await prisma.meal.findMany({
+      include: {
+        chromicDiseases: true
+      }
+    });
+
+    // فلترة الوجبات لاستبعاد أي وجبة تحتوي على مرض من أمراض المستخدم
+    const allowedMeals = allMeals.filter(meal => {
+      // هل الوجبة تمتلك أي مرض يتطابق مع أمراض المستخدم؟
+      const isForbidden = meal.chromicDiseases.some(md => userChronicDiseasesIds.includes(md.chronicDiseasesId));
+      return !isForbidden;
+    });
+
+    // تقسيم الوجبات المسموحة حسب نوعها
+    const breakfasts = allowedMeals.filter(m => m.time === "BREAKFAST");
+    const lunches = allowedMeals.filter(m => m.time === "LUNCH");
+    const dinners = allowedMeals.filter(m => m.time === "DINNER");
+    const snacks = allowedMeals.filter(m => m.time === "SNACK");
 
     // نقتصر التوليد على وجود وجبات على الأقل في قاعدة البيانات
     if (breakfasts.length > 0 && lunches.length > 0 && dinners.length > 0 && snacks.length > 0) {
@@ -140,7 +160,14 @@ export const getPlanById = async (req, res) => {
     const { id } = req.params;
     const plan = await prisma.plan.findUnique({
       where: { id },
-      include: { user: true, meals: true }
+      include: {
+        user: true,
+        meals: {
+          include: {
+            meal: true // This guarantees we get the specific meal details (name, cal, image, etc.)
+          }
+        }
+      }
     });
     res.json(plan);
   } catch (error) {
