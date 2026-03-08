@@ -1,12 +1,12 @@
-
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-/* ------------------ Create Profile ------------------ */
+/* ------------------ Create / Upsert Profile ------------------ */
 export const createProfile = async (req, res) => {
   try {
-    const userId = req.user.id; // Use authenticated userId
+    const userId = req.user.id;
+
     const {
       gender,
       age,
@@ -17,39 +17,57 @@ export const createProfile = async (req, res) => {
       chronicDiseasesIds,
     } = req.body;
 
+    /* -------- Validation -------- */
+    if (!gender || !age || !height || !currentWeight || !goal || !activityLevel) {
+      return res.status(400).json({
+        message: "Missing required profile fields",
+      });
+    }
+
     const commonData = {
       gender,
-      age: age ? Number(age) : null,
-      height: height ? Number(height) : null,
-      currentWeight: currentWeight ? Number(currentWeight) : null,
+      age: Number(age),
+      height: Number(height),
+      currentWeight: Number(currentWeight),
       goal,
       activityLevel,
     };
 
-    const chronicDiseasesCreate = (chronicDiseasesIds && Array.isArray(chronicDiseasesIds))
-      ? chronicDiseasesIds.map((id) => ({
-        chronicDisease: {
-          connect: { id: Number(id) },
-        },
-      }))
-      : [];
+    /* -------- Chronic Diseases Mapping -------- */
+    const chronicDiseasesCreate =
+      chronicDiseasesIds && Array.isArray(chronicDiseasesIds)
+        ? chronicDiseasesIds.map((id) => ({
+          chronicDisease: {
+            connect: { id: Number(id) },
+          },
+        }))
+        : [];
 
     const profile = await prisma.profile.upsert({
       where: { userId },
+
       update: {
         ...commonData,
-        chronicDiseases: {
-          deleteMany: {}, // Clear existing only on update
-          create: chronicDiseasesCreate,
-        },
+
+        ...(chronicDiseasesIds !== undefined && {
+          chronicDiseases: {
+            deleteMany: {},
+            create: chronicDiseasesCreate,
+          },
+        }),
       },
+
       create: {
         userId,
         ...commonData,
-        chronicDiseases: {
-          create: chronicDiseasesCreate, // No deleteMany on create
-        },
+
+        ...(chronicDiseasesIds && {
+          chronicDiseases: {
+            create: chronicDiseasesCreate,
+          },
+        }),
       },
+
       include: {
         chronicDiseases: {
           include: {
@@ -65,7 +83,10 @@ export const createProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("CreateProfile Error:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
   }
 };
 
@@ -76,26 +97,51 @@ export const getProfile = async (req, res) => {
 
     const profile = await prisma.profile.findUnique({
       where: { id: Number(id) },
+      include: {
+        chronicDiseases: {
+          include: {
+            chronicDisease: true,
+          },
+        },
+      },
     });
 
-    if (!profile)
-      return res.status(404).json({ message: "Profile not found" });
+    if (!profile) {
+      return res.status(404).json({
+        message: "Profile not found",
+      });
+    }
 
     res.status(200).json({ profile });
   } catch (error) {
     console.error("GetProfile Error:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
   }
 };
 
 /* ------------------ Get All Profiles ------------------ */
 export const getAllProfiles = async (req, res) => {
   try {
-    const profiles = await prisma.profile.findMany();
+    const profiles = await prisma.profile.findMany({
+      include: {
+        chronicDiseases: {
+          include: {
+            chronicDisease: true,
+          },
+        },
+      },
+    });
+
     res.status(200).json({ profiles });
   } catch (error) {
     console.error("GetAllProfiles Error:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
   }
 };
 
@@ -103,6 +149,7 @@ export const getAllProfiles = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const { id } = req.params;
+
     const {
       gender,
       age,
@@ -122,17 +169,17 @@ export const updateProfile = async (req, res) => {
       activityLevel,
     };
 
-    // Only update chronicDiseases if the field is provided in the request
     if (chronicDiseasesIds !== undefined) {
       updateData.chronicDiseases = {
-        deleteMany: {}, // Clear existing associations
-        create: (chronicDiseasesIds && Array.isArray(chronicDiseasesIds))
-          ? chronicDiseasesIds.map((id) => ({
-            chronicDisease: {
-              connect: { id: Number(id) },
-            },
-          }))
-          : [],
+        deleteMany: {},
+        create:
+          chronicDiseasesIds && Array.isArray(chronicDiseasesIds)
+            ? chronicDiseasesIds.map((id) => ({
+              chronicDisease: {
+                connect: { id: Number(id) },
+              },
+            }))
+            : [],
       };
     }
 
@@ -154,7 +201,10 @@ export const updateProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("UpdateProfile Error:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
   }
 };
 
@@ -163,11 +213,18 @@ export const deleteProfile = async (req, res) => {
   try {
     const { id } = req.params;
 
-    await prisma.profile.delete({ where: { id: Number(id) } });
+    await prisma.profile.delete({
+      where: { id: Number(id) },
+    });
 
-    res.status(200).json({ message: "Profile deleted successfully" });
+    res.status(200).json({
+      message: "Profile deleted successfully",
+    });
   } catch (error) {
     console.error("DeleteProfile Error:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
   }
 };

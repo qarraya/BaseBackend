@@ -134,7 +134,9 @@ export const signUp = async (req, res) => {
         id: result.user.id,
         username: result.user.username,
         email: result.user.email,
+        isVerified: result.user.isVerified,
         createdAt: result.user.createdAt,
+        profile: result.profile,
         accessToken: accessToken,
       },
     });
