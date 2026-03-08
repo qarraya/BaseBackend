@@ -1,10 +1,11 @@
 import express from "express";
-import { createProfile, getAllProfiles, getProfile, updateProfile, deleteProfile } from "./Profile.Controller.js";
+import { createProfile, getAllProfiles, getProfile, updateProfile, deleteProfile, getMyProfile } from "./Profile.Controller.js";
 import { verifyAnyoneHasAccount } from "../../middleware/verifyToken.js";
 
 const router = express.Router();
 
 router.post("/", verifyAnyoneHasAccount, createProfile);
+router.get("/me", verifyAnyoneHasAccount, getMyProfile);
 router.get("/", getAllProfiles);
 router.get("/:id", getProfile);
 router.put("/:id", updateProfile);

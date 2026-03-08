@@ -83,6 +83,7 @@ model User {
   plans           Plan[]
   progress        Progress[]
   notifications   Notification[]
+  questions       Question[]
 }
 
 
@@ -142,11 +143,21 @@ model Meal {
   id        String   @id @default(uuid())
   name      String
   calories  Int
+  imageUrl  String?
   time      MealTime
   createdAt DateTime @default(now())
 
   chromicDiseases MealChronicDiseases[]
   planMeals       PlanMeal[]
+}
+
+model Question {
+  id        String   @id @default(uuid())
+  content   String
+  answer    String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
 
 ////////////////////////////

@@ -18,7 +18,14 @@ export const createProfile = async (req, res) => {
     } = req.body;
 
     /* -------- Validation -------- */
-    if (!gender || !age || !height || !currentWeight || !goal || !activityLevel) {
+    if (
+      gender == null ||
+      age == null ||
+      height == null ||
+      currentWeight == null ||
+      goal == null ||
+      activityLevel == null
+    ) {
       return res.status(400).json({
         message: "Missing required profile fields",
       });
@@ -119,6 +126,32 @@ export const getProfile = async (req, res) => {
       message: "Server error",
       error: error.message,
     });
+  }
+};
+
+/* ------------------ Get My Profile ------------------ */
+export const getMyProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const profile = await prisma.profile.findUnique({
+      where: { userId },
+      include: {
+        chronicDiseases: {
+          include: {
+            chronicDisease: true,
+          },
+        },
+      },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ message: "Profile not found" });
+    }
+
+    res.status(200).json({ profile });
+  } catch (error) {
+    console.error("GetMyProfile Error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 

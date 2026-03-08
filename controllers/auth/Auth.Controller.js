@@ -128,7 +128,7 @@ export const signUp = async (req, res) => {
     });
 
     /* ------------------ Success Response ------------------ */
-    const responseData = {
+    return res.status(201).json({
       message: "User registered successfully.",
       user: {
         id: result.user.id,
@@ -136,14 +136,9 @@ export const signUp = async (req, res) => {
         email: result.user.email,
         isVerified: result.user.isVerified,
         createdAt: result.user.createdAt,
-        profile: result.profile,
         accessToken: accessToken,
       },
-      accessToken: accessToken, // Flattened for compatibility
-    };
-
-    console.log("Final SignUp Data to send:", JSON.stringify(responseData, null, 2));
-    return res.status(201).json(responseData);
+    });
   } catch (error) {
     console.error("SignUp Error:", error);
 
@@ -239,7 +234,7 @@ export const logIn = async (req, res) => {
     });
 
     /* ------------------ Success Response ------------------ */
-    const responseData = {
+    return res.status(200).json({
       message: "Login successful.",
       user: {
         id: user.id,
@@ -250,11 +245,7 @@ export const logIn = async (req, res) => {
         profile: user.profile,
         accessToken: accessToken,
       },
-      accessToken: accessToken, // Flattened for compatibility
-    };
-
-    console.log("Final Login Data to send:", JSON.stringify(responseData, null, 2));
-    return res.status(200).json(responseData);
+    });
   } catch (error) {
     console.error("Login Error:", error);
     return res.status(500).json({
