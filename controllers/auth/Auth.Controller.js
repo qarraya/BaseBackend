@@ -79,12 +79,12 @@ export const signUp = async (req, res) => {
       const profile = await tx.profile.create({
         data: {
           userId: user.id,
-          gender,
+          gender: gender || null,
           age: age ? Number(age) : null,
           height: height ? Number(height) : null,
           currentWeight: currentWeight ? Number(currentWeight) : null,
-          goal,
-          activityLevel,
+          goal: goal || null,
+          activityLevel: activityLevel || null,
           chronicDiseases: {
             create: (chronicDiseasesIds && Array.isArray(chronicDiseasesIds))
               ? chronicDiseasesIds.map((id) => ({
@@ -107,16 +107,36 @@ export const signUp = async (req, res) => {
       return { user, profile };
     });
 
+    /* ------------------ Generate JWT ------------------ */
+    const accessToken = jwt.sign(
+      {
+        id: result.user.id,
+        email: result.user.email,
+        username: result.user.username,
+        role: "user",
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" },
+    );
+
+    /* ------------------ Set Cookie ------------------ */
+    res.cookie("auth_token", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     /* ------------------ Success Response ------------------ */
     return res.status(201).json({
-      message: "User and Profile created successfully.",
+      message: "User registered successfully.",
       user: {
         id: result.user.id,
         username: result.user.username,
         email: result.user.email,
         createdAt: result.user.createdAt,
+        accessToken: accessToken,
       },
-      profile: result.profile,
     });
   } catch (error) {
     console.error("SignUp Error:", error);
@@ -207,8 +227,8 @@ export const logIn = async (req, res) => {
     /* ------------------ Set Cookie ------------------ */
     res.cookie("auth_token", accessToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: "None",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
