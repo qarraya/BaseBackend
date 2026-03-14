@@ -138,7 +138,7 @@ export const createPlan = async (req, res) => {
       });
     }
 
-    res.json(plan);
+    res.json({ ...plan, calories: plan.totalCalories });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -148,7 +148,11 @@ export const createPlan = async (req, res) => {
 export const getPlans = async (req, res) => {
   try {
     const plans = await prisma.plan.findMany({ include: { user: true } });
-    res.json(plans);
+    const formattedPlans = plans.map(plan => ({
+      ...plan,
+      calories: plan.totalCalories
+    }));
+    res.json(formattedPlans);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -169,7 +173,8 @@ export const getPlanById = async (req, res) => {
         }
       }
     });
-    res.json(plan);
+    if (!plan) return res.status(404).json({ error: "Plan not found" });
+    res.json({ ...plan, calories: plan.totalCalories });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -180,7 +185,7 @@ export const updatePlan = async (req, res) => {
   try {
     const { id } = req.params;
     const plan = await prisma.plan.update({ where: { id }, data: req.body });
-    res.json(plan);
+    res.json({ ...plan, calories: plan.totalCalories });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -196,3 +201,29 @@ export const deletePlan = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// 📥 Get Latest Plan for a Specific User
+export const getUserPlan = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const plan = await prisma.plan.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        meals: {
+          include: {
+            meal: true
+          }
+        }
+      }
+    });
+
+    if (!plan) {
+      return res.status(404).json({ message: "No plan found for this user." });
+    }
+
+    res.json({ ...plan, calories: plan.totalCalories });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
