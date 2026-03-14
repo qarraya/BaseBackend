@@ -14,7 +14,7 @@ const mealCategories = {
         { name: "سلطة دجاج مشوي", calories: 420, imageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c", incompatibleDiseases: [] },
         { name: "سلمون مشوي مع أرز بني", calories: 550, imageUrl: "https://images.unsplash.com/photo-1467003909585-2f8a72700288", incompatibleDiseases: [] },
         { name: "مكرونة قمح كامل بصلصة الطماطم", calories: 480, imageUrl: "https://images.unsplash.com/photo-1473093226795-af9932fe5856", incompatibleDiseases: ["السكري"] }, // كاربوهيدرات
-        { name: "كفتة مشوية مع سلطة", calories: 450, imageUrl: "https://images.unsplash.com/photo-1529006557870-17482574e48b", incompatibleDiseases: ["أمراض القلب", "ارتفاع ضغط الدم"] }, // لحم أحمر مدهن
+        { name: "كفتة مشوية مع سلطة", calories: 450, imageUrl: "https://images.unsplash.com/photo-1598514983318-2f64f8f4796c", incompatibleDiseases: ["أمراض القلب", "ارتفاع ضغط الدم"] }, // لحم أحمر مدهن
         { name: "عدس مطهو (شوربة أو مجدرة)", calories: 400, imageUrl: "https://images.unsplash.com/photo-1547592166-23ac45744acd", incompatibleDiseases: [] }
     ],
     DINNER: [
