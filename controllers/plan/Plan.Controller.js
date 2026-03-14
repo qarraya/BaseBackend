@@ -138,7 +138,9 @@ export const createPlan = async (req, res) => {
       });
     }
 
-    res.json({ ...plan, calories: plan.totalCalories });
+    const response = JSON.parse(JSON.stringify(plan));
+        response.calories = plan.totalCalories;
+        res.json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -174,7 +176,9 @@ export const getPlanById = async (req, res) => {
       }
     });
     if (!plan) return res.status(404).json({ error: "Plan not found" });
-    res.json({ ...plan, calories: plan.totalCalories });
+    const response = JSON.parse(JSON.stringify(plan));
+        response.calories = plan.totalCalories;
+        res.json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -185,7 +189,9 @@ export const updatePlan = async (req, res) => {
   try {
     const { id } = req.params;
     const plan = await prisma.plan.update({ where: { id }, data: req.body });
-    res.json({ ...plan, calories: plan.totalCalories });
+    const response = JSON.parse(JSON.stringify(plan));
+        response.calories = plan.totalCalories;
+        res.json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -222,7 +228,9 @@ export const getUserPlan = async (req, res) => {
       return res.status(404).json({ message: "No plan found for this user." });
     }
 
-    res.json({ ...plan, calories: plan.totalCalories });
+    const response = JSON.parse(JSON.stringify(plan));
+        response.calories = plan.totalCalories;
+        res.json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
