@@ -102,6 +102,8 @@ export const getDashboardToday = async (req, res) => {
                 },
                 caloriesSummary: {
                     target: targetCalories,
+                    calories: targetCalories,
+                    totalCalories: targetCalories,
                     consumed: consumedCalories,
                     remaining: Math.max(0, targetCalories - consumedCalories)
                 },
