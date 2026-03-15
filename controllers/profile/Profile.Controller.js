@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { generateUserPlan } from "../../utils/planGenerator.js";
 
 const prisma = new PrismaClient();
 
@@ -83,6 +84,13 @@ export const createProfile = async (req, res) => {
         },
       },
     });
+
+    /* ------------------ Trigger Automatic Plan Generation ------------------ */
+    try {
+      await generateUserPlan(userId);
+    } catch (planError) {
+      console.error("Automatic Plan Generation Failed on Profile Create:", planError);
+    }
 
     res.status(201).json({
       message: "Profile saved successfully",
@@ -227,6 +235,17 @@ export const updateProfile = async (req, res) => {
         },
       },
     });
+
+    /* ------------------ Trigger Automatic Plan Generation ------------------ */
+    try {
+      // Find userId for this profile to generate plan
+      const profileToUpdate = await prisma.profile.findUnique({ where: { id: Number(id) } });
+      if (profileToUpdate) {
+        await generateUserPlan(profileToUpdate.userId);
+      }
+    } catch (planError) {
+      console.error("Automatic Plan Generation Failed on Profile Update:", planError);
+    }
 
     res.status(200).json({
       message: "Profile updated successfully",

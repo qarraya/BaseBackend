@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
+import { generateUserPlan } from "../../utils/planGenerator.js";
 
 dotenv.config();
 
@@ -106,6 +107,14 @@ export const signUp = async (req, res) => {
 
       return { user, profile };
     });
+
+    /* ------------------ Generate Automatic Plan ------------------ */
+    try {
+      await generateUserPlan(result.user.id);
+    } catch (planError) {
+      console.error("Automatic Plan Generation Failed on SignUp:", planError);
+      // We don't block signup if plan generation fails, but we log it.
+    }
 
     /* ------------------ Generate JWT ------------------ */
     const accessToken = jwt.sign(
