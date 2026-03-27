@@ -10,13 +10,46 @@ export const createPlan = async (req, res) => {
   try {
     const { startDate, endDate, userId } = req.body;
 
+    // Check if an active plan already exists (endDate >= today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const existingPlan = await prisma.plan.findFirst({
+      where: {
+        userId,
+        endDate: { gte: today }
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        meals: {
+          include: { meal: true }
+        }
+      }
+    });
+
+    if (existingPlan) {
+      const response = JSON.parse(JSON.stringify(existingPlan));
+      response.calories = existingPlan.totalCalories;
+      return res.json(response);
+    }
+
     const plan = await generateUserPlan(userId, startDate, endDate);
 
     if (!plan) {
       return res.status(400).json({ error: "Failed to generate plan. Ensure profile exists and has weight/height." });
     }
 
-    const response = JSON.parse(JSON.stringify(plan));
+    // Fetch the newly generated plan mapped completely
+    const completePlan = await prisma.plan.findUnique({
+      where: { id: plan.id },
+      include: {
+        meals: {
+          include: { meal: true }
+        }
+      }
+    });
+
+    const response = JSON.parse(JSON.stringify(completePlan || plan));
     response.calories = plan.totalCalories;
     res.json(response);
   } catch (error) {
@@ -86,11 +119,11 @@ export const deletePlan = async (req, res) => {
   }
 };
 
-// 📥 Get Latest Plan for a Specific User
+// 📥 Get Latest / Active Plan for a Specific User
 export const getUserPlan = async (req, res) => {
   try {
     const { userId } = req.params;
-    const plan = await prisma.plan.findFirst({
+    let plan = await prisma.plan.findFirst({
       where: { userId },
       orderBy: { createdAt: "desc" },
       include: {
@@ -102,13 +135,33 @@ export const getUserPlan = async (req, res) => {
       }
     });
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // If no plan exists or the latest plan is expired, generate a new one
+    if (!plan || new Date(plan.endDate) < today) {
+      const newPlan = await generateUserPlan(userId);
+      if (newPlan) {
+        // Fetch the newly generated plan completely
+        plan = await prisma.plan.findFirst({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          include: {
+            meals: {
+              include: { meal: true }
+            }
+          }
+        });
+      }
+    }
+
     if (!plan) {
-      return res.status(404).json({ message: "No plan found for this user." });
+      return res.status(404).json({ message: "No active plan found. Please verify your profile has weight and height." });
     }
 
     const response = JSON.parse(JSON.stringify(plan));
-        response.calories = plan.totalCalories;
-        res.json(response);
+    response.calories = plan.totalCalories;
+    res.json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

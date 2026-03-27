@@ -54,10 +54,10 @@ export const createMeal = async (req, res) => {
         chromicDiseases:
           Array.isArray(chronicDiseasesIds) && chronicDiseasesIds.length > 0
             ? {
-                create: chronicDiseasesIds.map((id) => ({
-                  chronicDiseases: { connect: { id: Number(id) } },
-                })),
-              }
+              create: chronicDiseasesIds.map((id) => ({
+                chronicDiseases: { connect: { id: Number(id) } },
+              })),
+            }
             : undefined,
       },
       include: { chromicDiseases: true },
@@ -91,11 +91,11 @@ export const updateMeal = async (req, res) => {
         chromicDiseases:
           Array.isArray(chronicDiseasesIds)
             ? {
-                deleteMany: {}, // تحذف العلاقات القديمة
-                create: chronicDiseasesIds.map((id) => ({
-                  chronicDiseases: { connect: { id: Number(id) } },
-                })),
-              }
+              deleteMany: {}, // تحذف العلاقات القديمة
+              create: chronicDiseasesIds.map((id) => ({
+                chronicDiseases: { connect: { id: Number(id) } },
+              })),
+            }
             : undefined,
       },
       include: { chromicDiseases: true },

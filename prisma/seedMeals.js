@@ -7,7 +7,7 @@ const mealCategories = {
         { name: "زبادي يوناني مع التوت", calories: 320, imageUrl: "https://images.unsplash.com/photo-1488477181946-6428a0291777", incompatibleDiseases: [] },
         { name: "شوفان بالحليب والموز", calories: 350, imageUrl: "https://images.unsplash.com/photo-1517673400267-0251440c45dc", incompatibleDiseases: ["السكري"] }, // مثال: الموز يرفع السكر المسترد سريعا
         { name: "بيض مسلوق مع خبز أسمر", calories: 280, imageUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8", incompatibleDiseases: ["ارتفاع الكوليسترول"] }, // مثال: صفار البيض
-        { name: "أومليت بالخضار", calories: 310, imageUrl: "https://images.unsplash.com/photo-1494597564530-811f0a97ac3d", incompatibleDiseases: ["ارتفاع الكوليسترول"] },
+        { name: "أومليت بالخضار", calories: 310, imageUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8", incompatibleDiseases: ["ارتفاع الكوليسترول"] },
         { name: "توست الأفوكادو", calories: 340, imageUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8", incompatibleDiseases: [] }
     ],
     LUNCH: [
@@ -26,9 +26,9 @@ const mealCategories = {
     ],
     SNACK: [
         { name: "تفاح ولوز", calories: 180, imageUrl: "https://images.unsplash.com/photo-1490818387583-1baba5e638af", incompatibleDiseases: [] },
-        { name: "مكسرات مشكلة", calories: 200, imageUrl: "https://images.unsplash.com/photo-1536620453303-34e2c94d688c", incompatibleDiseases: [] },
+        { name: "مكسرات مشكلة", calories: 200, imageUrl: "https://images.unsplash.com/photo-1490818387583-1baba5e638af", incompatibleDiseases: [] },
         { name: "زبادي سادة", calories: 120, imageUrl: "https://images.unsplash.com/photo-1488477181946-6428a0291777", incompatibleDiseases: [] },
-        { name: "تمر وجوز", calories: 220, imageUrl: "https://images.unsplash.com/photo-1505253505346-6330b6e9273c", incompatibleDiseases: ["السكري"] } // تمر سكرياته عالية
+        { name: "تمر وجوز", calories: 220, imageUrl: "https://images.unsplash.com/photo-1490818387583-1baba5e638af", incompatibleDiseases: ["السكري"] } // تمر سكرياته عالية
     ]
 };
 
