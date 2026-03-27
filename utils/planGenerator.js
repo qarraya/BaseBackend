@@ -122,10 +122,16 @@ export const generateUserPlan = async (userId, startDate = new Date(), endDate =
         const dMeal = dinners[(day - 1) % dinners.length];
         const sMeal = snacks[(day - 1) % snacks.length];
 
-        planMealsData.push({ planId: plan.id, mealId: bMeal.id, dayNumber: day, mealTime: "BREAKFAST" });
-        planMealsData.push({ planId: plan.id, mealId: lMeal.id, dayNumber: day, mealTime: "LUNCH" });
-        planMealsData.push({ planId: plan.id, mealId: dMeal.id, dayNumber: day, mealTime: "DINNER" });
-        planMealsData.push({ planId: plan.id, mealId: sMeal.id, dayNumber: day, mealTime: "SNACK" });
+        const baseDailyCalories = bMeal.calories + lMeal.calories + dMeal.calories + sMeal.calories;
+        let multiplier = 1.0;
+        if (baseDailyCalories > 0) {
+          multiplier = parseFloat((totalCalories / baseDailyCalories).toFixed(2));
+        }
+
+        planMealsData.push({ planId: plan.id, mealId: bMeal.id, dayNumber: day, mealTime: "BREAKFAST", multiplier });
+        planMealsData.push({ planId: plan.id, mealId: lMeal.id, dayNumber: day, mealTime: "LUNCH", multiplier });
+        planMealsData.push({ planId: plan.id, mealId: dMeal.id, dayNumber: day, mealTime: "DINNER", multiplier });
+        planMealsData.push({ planId: plan.id, mealId: sMeal.id, dayNumber: day, mealTime: "SNACK", multiplier });
       }
 
       await prisma.planMeal.createMany({

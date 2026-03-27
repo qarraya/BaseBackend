@@ -58,12 +58,12 @@ enum NotificationType {
 ////////////////////////////
 
 model Admin {
-  id            String         @id @default(uuid())
-  name          String
-  email         String         @unique
-  password      String
-  lastLogin     DateTime?
-  createdAt     DateTime       @default(now())
+  id        String    @id @default(uuid())
+  name      String
+  email     String    @unique
+  password  String
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
 }
 
 ////////////////////////////
@@ -71,30 +71,29 @@ model Admin {
 ////////////////////////////
 
 model User {
-  id            String            @id @default(uuid())
-  username      String            @unique
-  email         String            @unique
-  password      String
-  isVerified    Boolean           @default(true)
-  resetCode     String?           // To store the 6-digit code
-  resetCodeExpires DateTime?      // To store the expiration time
-  createdAt     DateTime          @default(now())
+  id               String    @id @default(uuid())
+  username         String    @unique
+  email            String    @unique
+  password         String
+  isVerified       Boolean   @default(true)
+  resetCode        String? // To store the 6-digit code
+  resetCodeExpires DateTime? // To store the expiration time
+  createdAt        DateTime  @default(now())
 
-  profile         Profile?
-  plans           Plan[]
-  progress        Progress[]
-  notifications   Notification[]
-  questions       Question[]
+  profile       Profile?
+  plans         Plan[]
+  progress      Progress[]
+  notifications Notification[]
+  questions     Question[]
 }
-
 
 //////////////////////////
 /////////////////////////
 //      Profile        //
 /////////////////////////
 model Profile {
-  id              Int      @id @default(autoincrement())
-  userId          String   @unique
+  id              Int                      @id @default(autoincrement())
+  userId          String                   @unique
   gender          Gender?
   age             Int?
   height          Float?
@@ -103,35 +102,33 @@ model Profile {
   activityLevel   ActivityLevelEnum?
   chronicDiseases ProfileChronicDiseases[]
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
-
-
 
 ////////////////////////////
 /// ChronicDiseases
 ////////////////////////////
 
 model ChronicDiseases {
-  id     Int                     @id @default(autoincrement())
-  name   String
-  type   ChronicDiseasesType
+  id   Int                 @id @default(autoincrement())
+  name String
+  type ChronicDiseasesType
 
   meals    MealChronicDiseases[]
-  profiles ProfileChronicDiseases[]  
+  profiles ProfileChronicDiseases[]
 }
 
 ///////////////////////////
 //   ProfileChronicDiseases
 //////////////////////////
 model ProfileChronicDiseases {
-  id                Int               @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  profileId         Int
-  chronicDiseaseId  Int
+  profileId        Int
+  chronicDiseaseId Int
 
-  profile           Profile           @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  chronicDisease    ChronicDiseases   @relation(fields: [chronicDiseaseId], references: [id], onDelete: Cascade)
+  profile        Profile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  chronicDisease ChronicDiseases @relation(fields: [chronicDiseaseId], references: [id], onDelete: Cascade)
 
   @@unique([profileId, chronicDiseaseId])
 }
@@ -141,12 +138,17 @@ model ProfileChronicDiseases {
 ////////////////////////////
 
 model Meal {
-  id        String   @id @default(uuid())
-  name      String
-  calories  Int
-  imageUrl  String?
-  time      MealTime
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  name        String
+  calories    Int
+  portion     String?
+  proteins    Float?
+  fats        Float?
+  carbs       Float?
+  ingredients String[] // مصفوفة نصوص للمكونات
+  imageUrl    String?
+  time        MealTime
+  createdAt   DateTime @default(now())
 
   chromicDiseases MealChronicDiseases[]
   planMeals       PlanMeal[]
@@ -196,11 +198,11 @@ model Plan {
 /// PLAN MEALS
 ////////////////////////////
 
-
 model PlanMeal {
-  id        String   @id @default(uuid())
-  dayNumber Int
-  mealTime  MealTime
+  id         String   @id @default(uuid())
+  dayNumber  Int
+  mealTime   MealTime
+  multiplier Float    @default(1.0)
 
   planId String
   mealId String
@@ -235,6 +237,6 @@ model Notification {
   isRead    Boolean          @default(false)
   createdAt DateTime         @default(now())
 
-  userId  String
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

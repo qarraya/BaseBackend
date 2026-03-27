@@ -40,7 +40,7 @@ export const getMealById = async (req, res) => {
 /* ------------------ Create Meal ------------------ */
 export const createMeal = async (req, res) => {
   try {
-    const { name, calories, time, chronicDiseasesIds } = req.body;
+    const { name, calories, portion, proteins, fats, carbs, ingredients, time, chronicDiseasesIds } = req.body;
 
     if (!name || calories === undefined || !time) {
       return res.status(400).json({ message: "Name, calories and time are required." });
@@ -50,6 +50,11 @@ export const createMeal = async (req, res) => {
       data: {
         name,
         calories: Number(calories),
+        portion: portion ?? null,
+        proteins: proteins !== undefined ? Number(proteins) : null,
+        fats: fats !== undefined ? Number(fats) : null,
+        carbs: carbs !== undefined ? Number(carbs) : null,
+        ingredients: Array.isArray(ingredients) ? ingredients : [],
         time, // MUST match MealTime enum
         chromicDiseases:
           Array.isArray(chronicDiseasesIds) && chronicDiseasesIds.length > 0
@@ -74,7 +79,7 @@ export const createMeal = async (req, res) => {
 export const updateMeal = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, calories, time, chronicDiseasesIds } = req.body;
+    const { name, calories, portion, proteins, fats, carbs, ingredients, time, chronicDiseasesIds } = req.body;
 
     const existingMeal = await prisma.meal.findUnique({ where: { id } });
 
@@ -87,6 +92,11 @@ export const updateMeal = async (req, res) => {
       data: {
         name: name ?? existingMeal.name,
         calories: calories !== undefined ? Number(calories) : existingMeal.calories,
+        portion: portion !== undefined ? portion : existingMeal.portion,
+        proteins: proteins !== undefined ? Number(proteins) : existingMeal.proteins,
+        fats: fats !== undefined ? Number(fats) : existingMeal.fats,
+        carbs: carbs !== undefined ? Number(carbs) : existingMeal.carbs,
+        ingredients: Array.isArray(ingredients) ? ingredients : existingMeal.ingredients,
         time: time ?? existingMeal.time,
         chromicDiseases:
           Array.isArray(chronicDiseasesIds)
