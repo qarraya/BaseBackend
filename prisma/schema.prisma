@@ -141,7 +141,6 @@ model Meal {
   id          String   @id @default(uuid())
   name        String
   calories    Int
-  portion     String?
   proteins    Float?
   fats        Float?
   carbs       Float?
