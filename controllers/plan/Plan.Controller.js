@@ -52,11 +52,17 @@ export const createPlan = async (req, res) => {
     const response = JSON.parse(JSON.stringify(completePlan || plan));
     response.calories = plan.totalCalories;
     
-    // Flatten meals: spread meal details directly into the meal object in the plan
+    // Minimal meal details for the list card
     if (response.meals) {
       response.meals = response.meals.map(m => ({
-        ...m,
-        ...(m.meal || {})
+        id: m.id,                       // ID of the PlanMeal entry
+        mealId: m.meal?.id || m.mealId, // ID of the Meal for details
+        name: m.meal?.name,
+        calories: m.meal?.calories,
+        imageUrl: m.meal?.imageUrl,
+        time: m.meal?.time,
+        dayNumber: m.dayNumber,
+        multiplier: m.multiplier
       }));
     }
 
@@ -99,11 +105,17 @@ export const getPlanById = async (req, res) => {
     const response = JSON.parse(JSON.stringify(plan));
     response.calories = plan.totalCalories;
 
-    // Flatten meals
+    // Minimal meal details for the list card
     if (response.meals) {
       response.meals = response.meals.map(m => ({
-        ...m,
-        ...(m.meal || {})
+        id: m.id,
+        mealId: m.meal?.id || m.mealId,
+        name: m.meal?.name,
+        calories: m.meal?.calories,
+        imageUrl: m.meal?.imageUrl,
+        time: m.meal?.time,
+        dayNumber: m.dayNumber,
+        multiplier: m.multiplier
       }));
     }
 
@@ -180,11 +192,17 @@ export const getUserPlan = async (req, res) => {
     const response = JSON.parse(JSON.stringify(plan));
     response.calories = plan.totalCalories;
 
-    // Flatten meals: so the "front-end" can easily click and access portion, protein, etc.
+    // Minimal meal details for the list card: so the rectangle stays clean
     if (response.meals) {
       response.meals = response.meals.map(m => ({
-        ...m,
-        ...(m.meal || {})
+        id: m.id,
+        mealId: m.meal?.id || m.mealId,
+        name: m.meal?.name,
+        calories: m.meal?.calories,
+        imageUrl: m.meal?.imageUrl,
+        time: m.meal?.time,
+        dayNumber: m.dayNumber,
+        multiplier: m.multiplier
       }));
     }
 
