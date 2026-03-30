@@ -84,7 +84,6 @@ model User {
   plans         Plan[]
   progress      Progress[]
   notifications Notification[]
-  questions     Question[]
 }
 
 //////////////////////////
@@ -145,7 +144,7 @@ model Meal {
   proteins    Float?
   fats        Float?
   carbs       Float?
-  ingredients String[] // مصفوفة نصوص للمكونات
+  ingredients String[]
   imageUrl    String?
   time        MealTime
   createdAt   DateTime @default(now())
@@ -154,14 +153,7 @@ model Meal {
   planMeals       PlanMeal[]
 }
 
-model Question {
-  id        String   @id @default(uuid())
-  content   String
-  answer    String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-}
+
 
 ////////////////////////////
 /// MEAL ↔ ChronicDiseases (M-M)

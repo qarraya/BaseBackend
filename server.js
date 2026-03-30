@@ -15,6 +15,7 @@ import dashboardRoutes from "./controllers/dashboard/Dashboard.Routes.js";
 import settingsRoutes from "./controllers/settings/Settings.Routes.js";
 
 
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -67,6 +68,7 @@ app.use("/api/plan", planRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/settings", settingsRoutes);
+
 
 
 

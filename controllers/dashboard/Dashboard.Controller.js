@@ -85,7 +85,12 @@ export const getDashboardToday = async (req, res) => {
                     timeString,
                     name: pm.meal.name,
                     calories: pm.meal.calories,
-                    imageUrl: pm.meal.imageUrl || null
+                    imageUrl: pm.meal.imageUrl || null,
+                    portion: pm.meal.portion || "",
+                    proteins: pm.meal.proteins || 0,
+                    fats: pm.meal.fats || 0,
+                    carbs: pm.meal.carbs || 0,
+                    ingredients: pm.meal.ingredients || []
                 };
             });
         } else {

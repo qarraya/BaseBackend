@@ -51,6 +51,15 @@ export const createPlan = async (req, res) => {
 
     const response = JSON.parse(JSON.stringify(completePlan || plan));
     response.calories = plan.totalCalories;
+    
+    // Flatten meals: spread meal details directly into the meal object in the plan
+    if (response.meals) {
+      response.meals = response.meals.map(m => ({
+        ...m,
+        ...(m.meal || {})
+      }));
+    }
+
     res.json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -88,8 +97,17 @@ export const getPlanById = async (req, res) => {
     });
     if (!plan) return res.status(404).json({ error: "Plan not found" });
     const response = JSON.parse(JSON.stringify(plan));
-        response.calories = plan.totalCalories;
-        res.json(response);
+    response.calories = plan.totalCalories;
+
+    // Flatten meals
+    if (response.meals) {
+      response.meals = response.meals.map(m => ({
+        ...m,
+        ...(m.meal || {})
+      }));
+    }
+
+    res.json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -161,6 +179,15 @@ export const getUserPlan = async (req, res) => {
 
     const response = JSON.parse(JSON.stringify(plan));
     response.calories = plan.totalCalories;
+
+    // Flatten meals: so the "front-end" can easily click and access portion, protein, etc.
+    if (response.meals) {
+      response.meals = response.meals.map(m => ({
+        ...m,
+        ...(m.meal || {})
+      }));
+    }
+
     res.json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
