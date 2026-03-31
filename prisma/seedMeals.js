@@ -4,18 +4,18 @@ const prisma = new PrismaClient();
 
 const mealCategories = {
     BREAKFAST: [
-        { name: "زبادي يوناني مع التوت", calories: 320, portion: "200غ", fats: 10, proteins: 15, carbs: 40, ingredients: ["150غ زبادي يوناني", "50غ توت", "ملعقة عسل"], imageUrl: "https://images.unsplash.com/photo-1488477181946-6428a0291777", incompatibleDiseases: [] },
-        { name: "شوفان بالحليب والموز", calories: 350, portion: "250غ", fats: 5, proteins: 12, carbs: 60, ingredients: ["نصف كوب شوفان", "كوب حليب", "موزة مقطعة"], imageUrl: "https://images.unsplash.com/photo-1517673400267-0251440c45dc", incompatibleDiseases: ["السكري"] },
-        { name: "بيض مسلوق مع خبز أسمر", calories: 280, portion: "150غ", fats: 10, proteins: 14, carbs: 30, ingredients: ["حبتين بيض مسلوق", "شريحتين خبز أسمر"], imageUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8", incompatibleDiseases: ["ارتفاع الكوليسترول"] },
-        { name: "أومليت بالخضار", calories: 310, portion: "200غ", fats: 15, proteins: 16, carbs: 20, ingredients: ["حبتين بيض", "ربع كوب خضار مشكلة", "ملعقة زيت زيتون"], imageUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8", incompatibleDiseases: ["ارتفاع الكوليسترول"] },
-        { name: "توست الأفوكادو", calories: 340, portion: "150غ", fats: 18, proteins: 8, carbs: 35, ingredients: ["شريحة خبز توست", "نصف حبة أفوكادو مهروسة", "رشة ملح وفلفل"], imageUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8", incompatibleDiseases: [] }
+        { name: "زبادي يوناني مع التوت", calories: 220, portion: "200غ", fats: 8.3, proteins: 12.5, carbs: 24, ingredients: ["150غ زبادي يوناني", "50غ توت", "ملعقة عسل"], imageUrl: "https://images.unsplash.com/photo-1488477181946-6428a0291777", incompatibleDiseases: [] },
+        { name: "شوفان بالحليب والموز", calories: 400, portion: "250غ", fats: 11.3, proteins: 14, carbs: 66, ingredients: ["نصف كوب شوفان", "كوب حليب", "موزة مقطعة"], imageUrl: "https://images.unsplash.com/photo-1517673400267-0251440c45dc", incompatibleDiseases: ["السكري"] },
+        { name: "بيض مسلوق مع خبز أسمر", calories: 300, portion: "150غ", fats: 12, proteins: 18, carbs: 29, ingredients: ["حبتين بيض مسلوق", "شريحتين خبز أسمر"], imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRHo5K9raOvO52pwudKc2fUcVod8SZ6gpzzkw&s", incompatibleDiseases: ["ارتفاع الكوليسترول"] },
+        { name: "أومليت بالخضار", calories: 280, portion: "200غ", fats: 24, proteins: 13, carbs: 5, ingredients: ["حبتين بيض", "ربع كوب خضار مشكلة", "ملعقة زيت زيتون"], imageUrl: "https://www.mygorgeousrecipes.com/wp-content/uploads/2018/02/Vegetarian-Omelette-1.jpg", incompatibleDiseases: ["ارتفاع الكوليسترول"] },
+        { name: "توست الأفوكادو", calories: 225, portion: "150غ", fats: 12, proteins: 5, carbs: 27, ingredients: ["شريحة خبز توست", "نصف حبة أفوكادو مهروسة", "رشة ملح وفلفل"], imageUrl: "https://cookingwithcoit.com/wp-content/uploads/2021/04/HERO_Avocado-Toast.jpg", incompatibleDiseases: [] }
     ],
     LUNCH: [
-        { name: "سلطة دجاج مشوي", calories: 420, portion: "300غ", fats: 15, proteins: 35, carbs: 25, ingredients: ["150غ صدر دجاج مشوي", "كوبين خس", "طماطم وخيار", "ملعقتين صلصة خل وزيت"], imageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c", incompatibleDiseases: [] },
-        { name: "سلمون مشوي مع أرز بني", calories: 550, portion: "350غ", fats: 20, proteins: 40, carbs: 50, ingredients: ["150غ فيليه سلمون", "كوب أرز بني مسلوق", "نصف كوب خضار سوتيه"], imageUrl: "https://images.unsplash.com/photo-1467003909585-2f8a72700288", incompatibleDiseases: [] },
-        { name: "مكرونة قمح كامل بصلصة الطماطم", calories: 480, portion: "300غ", fats: 10, proteins: 15, carbs: 80, ingredients: ["كوب مكرونة مسلوقة", "نصف كوب صلصة طماطم طبيعية", "ملعقة جبن مبشور"], imageUrl: "https://images.unsplash.com/photo-1473093226795-af9932fe5856", incompatibleDiseases: ["السكري"] },
-        { name: "كفتة مشوية مع سلطة", calories: 450, portion: "250غ", fats: 25, proteins: 30, carbs: 20, ingredients: ["150غ لحم مفروم مشوي", "بصل وبقدونس", "سلطة تبولة صغيرة"], imageUrl: "https://images.unsplash.com/photo-1598514983318-2f64f8f4796c", incompatibleDiseases: ["أمراض القلب", "ارتفاع ضغط الدم"] },
-        { name: "عدس مطهو (شوربة أو مجدرة)", calories: 400, portion: "350غ", fats: 8, proteins: 18, carbs: 60, ingredients: ["كوب ونصف عدس مطبوخ", "بصل مقلي", "بهارات"], imageUrl: "https://images.unsplash.com/photo-1547592166-23ac45744acd", incompatibleDiseases: [] }
+        { name: "سلطة دجاج مشوي", calories: 420, portion: "300غ", fats: 20, proteins: 32, carbs: 9, ingredients: ["150غ صدر دجاج مشوي", "كوبين خس", "طماطم وخيار", "ملعقتين صلصة خل وزيت"], imageUrl: "https://www.greatgrubdelicioustreats.com/wp-content/uploads/2022/05/Grilled_Chicken_Salad_13.jpg", incompatibleDiseases: [] },
+        { name: "سلمون مشوي مع أرز بني", calories: 550, portion: "350غ", fats: 20, proteins: 40, carbs: 50, ingredients: ["150غ فيليه سلمون", "كوب أرز بني مسلوق", "نصف كوب خضار سوتيه"], imageUrl: "https://www.healthyfood.com/wp-content/uploads/2016/11/Teriyaki-salmon-with-stir-fried-greens-and-brown-rice-1.jpg", incompatibleDiseases: [] },
+        { name: "معكرونة قمح كامل بصلصة الطماطم", calories: 300, portion: "300غ", fats: 4.5, proteins: 12, carbs: 54, ingredients: ["كوب مكرونة مسلوقة", "نصف كوب صلصة طماطم طبيعية", "ملعقة جبن مبشور"], imageUrl: "https://fortheloveofcooking.net/wp-content/uploads/2012/04/DSC_6314-2-scaled.jpg", incompatibleDiseases: ["السكري"] },
+        { name: "كفتة مشوية مع سلطة", calories: 360, portion: "250غ", fats: 21.5, proteins: 26.5, carbs: 8.5, ingredients: ["150غ لحم مفروم مشوي", "بصل وبقدونس", "سلطة تبولة صغيرة"], imageUrl: "https://images.themodernproper.com/production/posts/2020/Beef-Kofta-12.jpg?w=1200&h=1200&q=60&fm=jpg&fit=crop&dm=1683266321&s=51d6a810051f11ed9a22ea54dd0bba1f", incompatibleDiseases: ["أمراض القلب", "ارتفاع ضغط الدم"] },
+        { name: "مجدرة", calories: 420, portion: "350غ", fats: 5, proteins: 18, carbs: 70, ingredients: ["كوب عدس مطبوخ", "نصف كوب أرز مسلوق", "بصل مقلي", "بهارات"], imageUrl: "https://static01.nyt.com/images/2025/05/15/multimedia/ND-Mujadara-kzgm/ND-Mujadara-kzgm-mediumSquareAt3X.jpg", incompatibleDiseases: [] }
     ],
     DINNER: [
         { name: "سمك السلمون المشوي مع الخضار", calories: 480, portion: "300غ", fats: 18, proteins: 35, carbs: 25, ingredients: ["شريحة سلمون", "كوب بروكلي وجزر", "ملعقة زيتون"], imageUrl: "https://images.unsplash.com/photo-1467003909585-2f8a72700288", incompatibleDiseases: [] },
@@ -76,7 +76,11 @@ async function main() {
                 });
                 console.log(`- Created: ${mealReq.name} (${time}) with ${connections.length} restrictions`);
             } else {
-                console.log(`- Already exists: ${mealReq.name}`);
+                await prisma.meal.update({
+                    where: { id: existing.id },
+                    data: { imageUrl: mealReq.imageUrl }
+                });
+                console.log(`- Updated imageUrl for: ${mealReq.name}`);
             }
         }
     }
