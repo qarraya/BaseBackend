@@ -11,6 +11,54 @@ const prisma = new PrismaClient({
   log: ["error"],
 });
 
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
+
+const MAX_RESET_ATTEMPTS = 5;
+const resetAttemptsStore = new Map();
+
+const getResetAttemptKey = (email) => String(email || "").trim().toLowerCase();
+
+const resetAttemptWindowIfNeeded = (key) => {
+  const now = Date.now();
+  const existing = resetAttemptsStore.get(key);
+  if (!existing || now > existing.expiresAt) {
+    resetAttemptsStore.set(key, {
+      attempts: 0,
+      expiresAt: now + 15 * 60 * 1000,
+    });
+  }
+};
+
+const isResetRateLimited = (email) => {
+  const key = getResetAttemptKey(email);
+  if (!key) return false;
+
+  resetAttemptWindowIfNeeded(key);
+  const state = resetAttemptsStore.get(key);
+  return state.attempts >= MAX_RESET_ATTEMPTS;
+};
+
+const registerFailedResetAttempt = (email) => {
+  const key = getResetAttemptKey(email);
+  if (!key) return;
+
+  resetAttemptWindowIfNeeded(key);
+  const state = resetAttemptsStore.get(key);
+  state.attempts += 1;
+  resetAttemptsStore.set(key, state);
+};
+
+const clearResetAttempts = (email) => {
+  const key = getResetAttemptKey(email);
+  if (!key) return;
+  resetAttemptsStore.delete(key);
+};
+
 export const signUp = async (req, res) => {
   try {
     const {
@@ -129,12 +177,7 @@ export const signUp = async (req, res) => {
     );
 
     /* ------------------ Set Cookie ------------------ */
-    res.cookie("auth_token", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie("auth_token", accessToken, cookieOptions);
 
     /* ------------------ Success Response ------------------ */
     return res.status(201).json({
@@ -145,7 +188,6 @@ export const signUp = async (req, res) => {
         email: result.user.email,
         isVerified: result.user.isVerified,
         createdAt: result.user.createdAt,
-        accessToken: accessToken,
       },
     });
   } catch (error) {
@@ -210,9 +252,6 @@ export const logIn = async (req, res) => {
         message: "User not found.",
       });
     }
-    console.log("Entered password:", password);
-    console.log("Stored password:", user.password);
-
     /* ------------------ Compare Password ------------------ */
     const isMatch = await bcrypt.compare(password, user.password);
 
@@ -235,12 +274,7 @@ export const logIn = async (req, res) => {
     );
 
     /* ------------------ Set Cookie ------------------ */
-    res.cookie("auth_token", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie("auth_token", accessToken, cookieOptions);
 
     /* ------------------ Success Response ------------------ */
     return res.status(200).json({
@@ -252,7 +286,6 @@ export const logIn = async (req, res) => {
         isVerified: user.isVerified,
         createdAt: user.createdAt,
         profile: user.profile,
-        accessToken: accessToken,
       },
     });
   } catch (error) {
@@ -335,9 +368,9 @@ export const logOut = (req, res) => {
   try {
     /* ------------------ Clear Cookie ------------------ */
     res.clearCookie("auth_token", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
+      httpOnly: cookieOptions.httpOnly,
+      secure: cookieOptions.secure,
+      sameSite: cookieOptions.sameSite,
       expires: new Date(0),
     });
 
@@ -365,27 +398,22 @@ export const forgotPassword = async (req, res) => {
       where: { email: { equals: email, mode: "insensitive" } },
     });
 
-    console.log("DEBUG: ForgotPassword request for email:", email);
-    console.log("DEBUG: User found in DB:", user ? "YES" : "NO");
-
     if (user) {
       // Generate a 6-digit numeric code
       const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const hashedResetCode = await bcrypt.hash(resetCode, 10);
       const resetCodeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-
-      console.log("DEBUG: Generated code:", resetCode);
 
       try {
         await prisma.user.update({
           where: { id: user.id },
           data: {
-            resetCode,
+            resetCode: hashedResetCode,
             resetCodeExpires,
           },
         });
-        console.log("DEBUG: Database updated successfully with reset code.");
       } catch (dbError) {
-        console.error("DEBUG: Database update failed:", dbError);
+        console.error("Database update failed while setting reset code:", dbError);
         throw dbError; // Pass to main catch
       }
 
@@ -415,9 +443,8 @@ export const forgotPassword = async (req, res) => {
             </div>
           `,
         });
-        console.log("DEBUG: Reset email sent successfully to:", user.email);
       } catch (mailError) {
-        console.error("DEBUG: Mail sending failed:", mailError);
+        console.error("Mail sending failed for password reset:", mailError);
         // We don't throw here so we can still return 200, but we log the error
       }
     }
@@ -444,15 +471,32 @@ export const verifyResetCode = async (req, res) => {
       });
     }
 
+    if (isResetRateLimited(email)) {
+      return res.status(429).json({
+        message: "Too many invalid attempts. Please try again in 15 minutes.",
+      });
+    }
+
     const user = await prisma.user.findFirst({
       where: { email: { equals: email, mode: "insensitive" } },
     });
 
-    if (!user || user.resetCode !== code || !user.resetCodeExpires || new Date() > user.resetCodeExpires) {
+    if (!user || !user.resetCode || !user.resetCodeExpires || new Date() > user.resetCodeExpires) {
+      registerFailedResetAttempt(email);
       return res.status(400).json({
         message: "Invalid or expired reset code.",
       });
     }
+
+    const isCodeValid = await bcrypt.compare(String(code), user.resetCode);
+    if (!isCodeValid) {
+      registerFailedResetAttempt(email);
+      return res.status(400).json({
+        message: "Invalid or expired reset code.",
+      });
+    }
+
+    clearResetAttempts(email);
 
     return res.status(200).json({
       message: "Code verified successfully.",
@@ -475,11 +519,26 @@ export const resetPassword = async (req, res) => {
       });
     }
 
+    if (isResetRateLimited(email)) {
+      return res.status(429).json({
+        message: "Too many invalid attempts. Please try again in 15 minutes.",
+      });
+    }
+
     const user = await prisma.user.findFirst({
       where: { email: { equals: email, mode: "insensitive" } },
     });
 
-    if (!user || user.resetCode !== code || !user.resetCodeExpires || new Date() > user.resetCodeExpires) {
+    if (!user || !user.resetCode || !user.resetCodeExpires || new Date() > user.resetCodeExpires) {
+      registerFailedResetAttempt(email);
+      return res.status(400).json({
+        message: "Invalid or expired reset code.",
+      });
+    }
+
+    const isCodeValid = await bcrypt.compare(String(code), user.resetCode);
+    if (!isCodeValid) {
+      registerFailedResetAttempt(email);
       return res.status(400).json({
         message: "Invalid or expired reset code.",
       });
@@ -495,6 +554,8 @@ export const resetPassword = async (req, res) => {
         resetCodeExpires: null,
       },
     });
+
+    clearResetAttempts(email);
 
     return res.status(200).json({
       message: "Password has been reset successfully.",
