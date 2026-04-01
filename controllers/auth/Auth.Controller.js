@@ -278,16 +278,16 @@ export const logIn = async (req, res) => {
 
     /* ------------------ Success Response ------------------ */
     return res.status(201).json({
-  message: "User registered successfully.",
-  token: accessToken, // ✅ أضف هذا
-  user: {
-    id: result.user.id,
-    username: result.user.username,
-    email: result.user.email,
-    isVerified: result.user.isVerified,
-    createdAt: result.user.createdAt,
-  },
-});
+      message: "User registered successfully.",
+      token: accessToken, // ✅ أضف هذا
+      user: {
+        id: result.user.id,
+        username: result.user.username,
+        email: result.user.email,
+        isVerified: result.user.isVerified,
+        createdAt: result.user.createdAt,
+      },
+    });
   } catch (error) {
     console.error("Login Error:", error);
     return res.status(500).json({
