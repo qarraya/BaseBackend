@@ -277,17 +277,17 @@ export const logIn = async (req, res) => {
     res.cookie("auth_token", accessToken, cookieOptions);
 
     /* ------------------ Success Response ------------------ */
-    return res.status(200).json({
-      message: "Login successful.",
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        isVerified: user.isVerified,
-        createdAt: user.createdAt,
-        profile: user.profile,
-      },
-    });
+    return res.status(201).json({
+  message: "User registered successfully.",
+  token: accessToken, // ✅ أضف هذا
+  user: {
+    id: result.user.id,
+    username: result.user.username,
+    email: result.user.email,
+    isVerified: result.user.isVerified,
+    createdAt: result.user.createdAt,
+  },
+});
   } catch (error) {
     console.error("Login Error:", error);
     return res.status(500).json({
