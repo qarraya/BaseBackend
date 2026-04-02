@@ -2,7 +2,6 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import nodemailer from "nodemailer";
 import { generateUserPlan } from "../../utils/planGenerator.js";
 
 dotenv.config();
@@ -10,54 +9,6 @@ dotenv.config();
 const prisma = new PrismaClient({
   log: ["error"],
 });
-
-const cookieOptions = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-};
-
-const MAX_RESET_ATTEMPTS = 5;
-const resetAttemptsStore = new Map();
-
-const getResetAttemptKey = (email) => String(email || "").trim().toLowerCase();
-
-const resetAttemptWindowIfNeeded = (key) => {
-  const now = Date.now();
-  const existing = resetAttemptsStore.get(key);
-  if (!existing || now > existing.expiresAt) {
-    resetAttemptsStore.set(key, {
-      attempts: 0,
-      expiresAt: now + 15 * 60 * 1000,
-    });
-  }
-};
-
-const isResetRateLimited = (email) => {
-  const key = getResetAttemptKey(email);
-  if (!key) return false;
-
-  resetAttemptWindowIfNeeded(key);
-  const state = resetAttemptsStore.get(key);
-  return state.attempts >= MAX_RESET_ATTEMPTS;
-};
-
-const registerFailedResetAttempt = (email) => {
-  const key = getResetAttemptKey(email);
-  if (!key) return;
-
-  resetAttemptWindowIfNeeded(key);
-  const state = resetAttemptsStore.get(key);
-  state.attempts += 1;
-  resetAttemptsStore.set(key, state);
-};
-
-const clearResetAttempts = (email) => {
-  const key = getResetAttemptKey(email);
-  if (!key) return;
-  resetAttemptsStore.delete(key);
-};
 
 export const signUp = async (req, res) => {
   try {
@@ -73,7 +24,7 @@ export const signUp = async (req, res) => {
       height,
       goal,
       chronicDiseasesIds, // optional array
-    } = req.body
+    } = req.body;
 
     /* ------------------ Required Fields Validation ------------------ */
     const missingFields = [];
@@ -177,18 +128,23 @@ export const signUp = async (req, res) => {
     );
 
     /* ------------------ Set Cookie ------------------ */
-    res.cookie("auth_token", accessToken, cookieOptions);
+    res.cookie("auth_token", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     /* ------------------ Success Response ------------------ */
-    return res.status(200).json({
-      message: "Login successful.",
-      token: accessToken,
+    return res.status(201).json({
+      message: "User registered successfully.",
       user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        isVerified: user.isVerified,
-        createdAt: user.createdAt,
+        id: result.user.id,
+        username: result.user.username,
+        email: result.user.email,
+        isVerified: result.user.isVerified,
+        createdAt: result.user.createdAt,
+        accessToken: accessToken,
       },
     });
   } catch (error) {
@@ -253,6 +209,9 @@ export const logIn = async (req, res) => {
         message: "User not found.",
       });
     }
+    console.log("Entered password:", password);
+    console.log("Stored password:", user.password);
+
     /* ------------------ Compare Password ------------------ */
     const isMatch = await bcrypt.compare(password, user.password);
 
@@ -275,18 +234,24 @@ export const logIn = async (req, res) => {
     );
 
     /* ------------------ Set Cookie ------------------ */
-    res.cookie("auth_token", accessToken, cookieOptions);
+    res.cookie("auth_token", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     /* ------------------ Success Response ------------------ */
-    return res.status(201).json({
-      message: "User registered successfully.",
-      token: accessToken,
+    return res.status(200).json({
+      message: "Login successful.",
       user: {
-        id: result.user.id,
-        username: result.user.username,
-        email: result.user.email,
-        isVerified: result.user.isVerified,
-        createdAt: result.user.createdAt,
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        profile: user.profile,
+        accessToken: accessToken,
       },
     });
   } catch (error) {
@@ -369,9 +334,9 @@ export const logOut = (req, res) => {
   try {
     /* ------------------ Clear Cookie ------------------ */
     res.clearCookie("auth_token", {
-      httpOnly: cookieOptions.httpOnly,
-      secure: cookieOptions.secure,
-      sameSite: cookieOptions.sameSite,
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
       expires: new Date(0),
     });
 
@@ -380,189 +345,6 @@ export const logOut = (req, res) => {
     });
   } catch (error) {
     console.error("Logout Error:", error);
-    return res.status(500).json({
-      message: "Internal server error.",
-    });
-  }
-};
-export const forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({
-        message: "Email is required.",
-      });
-    }
-
-    const user = await prisma.user.findFirst({
-      where: { email: { equals: email, mode: "insensitive" } },
-    });
-
-    if (user) {
-      // Generate a 6-digit numeric code
-      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const hashedResetCode = await bcrypt.hash(resetCode, 10);
-      const resetCodeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-
-      try {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            resetCode: hashedResetCode,
-            resetCodeExpires,
-          },
-        });
-      } catch (dbError) {
-        console.error("Database update failed while setting reset code:", dbError);
-        throw dbError; // Pass to main catch
-      }
-
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
-
-      try {
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: user.email,
-          subject: "Password Reset Code",
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
-              <h2 style="color: #333; text-align: center;">Password Reset Request</h2>
-              <p>Hello,</p>
-              <p>You requested to reset your password. Please use the following 6-digit code to proceed:</p>
-              <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #4CAF50; border-radius: 5px; margin: 20px 0;">
-                ${resetCode}
-              </div>
-              <p>This code is valid for <strong>15 minutes</strong>. If you did not request this, please ignore this email or contact support.</p>
-              <p>Best regards,<br>Success App Team</p>
-            </div>
-          `,
-        });
-      } catch (mailError) {
-        console.error("Mail sending failed for password reset:", mailError);
-        // We don't throw here so we can still return 200, but we log the error
-      }
-    }
-
-    // Always return success for security reasons (don't reveal if email belongs to a user)
-    return res.status(200).json({
-      message: "If the email exists, a 6-digit reset code has been sent.",
-    });
-  } catch (error) {
-    console.error("forgotPassword error:", error);
-    return res.status(500).json({
-      message: "Internal server error.",
-    });
-  }
-};
-
-export const verifyResetCode = async (req, res) => {
-  try {
-    const { email, code } = req.body;
-
-    if (!email || !code) {
-      return res.status(400).json({
-        message: "Email and code are required.",
-      });
-    }
-
-    if (isResetRateLimited(email)) {
-      return res.status(429).json({
-        message: "Too many invalid attempts. Please try again in 15 minutes.",
-      });
-    }
-
-    const user = await prisma.user.findFirst({
-      where: { email: { equals: email, mode: "insensitive" } },
-    });
-
-    if (!user || !user.resetCode || !user.resetCodeExpires || new Date() > user.resetCodeExpires) {
-      registerFailedResetAttempt(email);
-      return res.status(400).json({
-        message: "Invalid or expired reset code.",
-      });
-    }
-
-    const isCodeValid = await bcrypt.compare(String(code), user.resetCode);
-    if (!isCodeValid) {
-      registerFailedResetAttempt(email);
-      return res.status(400).json({
-        message: "Invalid or expired reset code.",
-      });
-    }
-
-    clearResetAttempts(email);
-
-    return res.status(200).json({
-      message: "Code verified successfully.",
-    });
-  } catch (error) {
-    console.error("verifyResetCode error:", error);
-    return res.status(500).json({
-      message: "Internal server error.",
-    });
-  }
-};
-
-export const resetPassword = async (req, res) => {
-  try {
-    const { email, code, password } = req.body;
-
-    if (!email || !code || !password) {
-      return res.status(400).json({
-        message: "Email, code and new password are required.",
-      });
-    }
-
-    if (isResetRateLimited(email)) {
-      return res.status(429).json({
-        message: "Too many invalid attempts. Please try again in 15 minutes.",
-      });
-    }
-
-    const user = await prisma.user.findFirst({
-      where: { email: { equals: email, mode: "insensitive" } },
-    });
-
-    if (!user || !user.resetCode || !user.resetCodeExpires || new Date() > user.resetCodeExpires) {
-      registerFailedResetAttempt(email);
-      return res.status(400).json({
-        message: "Invalid or expired reset code.",
-      });
-    }
-
-    const isCodeValid = await bcrypt.compare(String(code), user.resetCode);
-    if (!isCodeValid) {
-      registerFailedResetAttempt(email);
-      return res.status(400).json({
-        message: "Invalid or expired reset code.",
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashedPassword,
-        resetCode: null, // Clear the code after successful reset
-        resetCodeExpires: null,
-      },
-    });
-
-    clearResetAttempts(email);
-
-    return res.status(200).json({
-      message: "Password has been reset successfully.",
-    });
-  } catch (error) {
-    console.error("resetPassword error:", error);
     return res.status(500).json({
       message: "Internal server error.",
     });
