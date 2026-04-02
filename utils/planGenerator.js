@@ -26,7 +26,6 @@ export const calculateCalories = (weight, height, age, gender, activityLevel, go
     VERY_ACTIVE: 1.9,
   };
 
-  // ✅ التعديل هون: نحسب الـ maintenance أولًا
   const maintenanceCalories = bmr * (activityMultipliers[a] || 1.2);
 
   let calories = maintenanceCalories;
