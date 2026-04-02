@@ -138,13 +138,13 @@ export const signUp = async (req, res) => {
     /* ------------------ Success Response ------------------ */
     return res.status(201).json({
       message: "User registered successfully.",
+      token: accessToken,
       user: {
         id: result.user.id,
         username: result.user.username,
         email: result.user.email,
         isVerified: result.user.isVerified,
         createdAt: result.user.createdAt,
-        accessToken: accessToken,
       },
     });
   } catch (error) {
