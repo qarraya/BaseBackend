@@ -2,6 +2,43 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+const hashString = (value = "") => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
+const pickMealForDay = (meals, dayIndex, goal, userId, mealTime) => {
+  if (!meals.length) return null;
+
+  const sortedMeals = [...meals].sort((a, b) => a.calories - b.calories);
+  const lowerHalf = sortedMeals.slice(0, Math.ceil(sortedMeals.length / 2));
+  const upperHalf = sortedMeals.slice(Math.floor(sortedMeals.length / 2));
+
+  let pool = sortedMeals;
+  const normalizedGoal = String(goal || "").toUpperCase();
+  if (normalizedGoal === "LOSE" && lowerHalf.length) {
+    pool = lowerHalf;
+  } else if (normalizedGoal === "GAIN" && upperHalf.length) {
+    pool = upperHalf;
+  }
+
+  // User-specific deterministic order; different users get different goal plans.
+  const orderedPool = [...pool].sort((a, b) => {
+    const aScore = hashString(`${userId}:${mealTime}:${normalizedGoal}:${a.id}`);
+    const bScore = hashString(`${userId}:${mealTime}:${normalizedGoal}:${b.id}`);
+    if (aScore === bScore) return a.id.localeCompare(b.id);
+    return aScore - bScore;
+  });
+
+  const rotation = hashString(`${userId}:${mealTime}:${normalizedGoal}`) % orderedPool.length;
+  const index = (rotation + dayIndex - 1) % orderedPool.length;
+  return orderedPool[index];
+};
+
 /**
  * Calculates daily calorie needs based on user profile.
  */
@@ -119,10 +156,12 @@ export const generateUserPlan = async (userId, startDate = new Date(), endDate =
       const planMealsData = [];
 
       for (let day = 1; day <= totalDays; day++) {
-        const bMeal = breakfasts[(day - 1) % breakfasts.length];
-        const lMeal = lunches[(day - 1) % lunches.length];
-        const dMeal = dinners[(day - 1) % dinners.length];
-        const sMeal = snacks[(day - 1) % snacks.length];
+        const bMeal = pickMealForDay(breakfasts, day, profile.goal, userId, "BREAKFAST");
+        const lMeal = pickMealForDay(lunches, day, profile.goal, userId, "LUNCH");
+        const dMeal = pickMealForDay(dinners, day, profile.goal, userId, "DINNER");
+        const sMeal = pickMealForDay(snacks, day, profile.goal, userId, "SNACK");
+
+        if (!bMeal || !lMeal || !dMeal || !sMeal) continue;
 
         const baseDailyCalories = bMeal.calories + lMeal.calories + dMeal.calories + sMeal.calories;
         let multiplier = 1.0;

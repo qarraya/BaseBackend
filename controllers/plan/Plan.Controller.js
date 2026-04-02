@@ -1,9 +1,30 @@
 import { PrismaClient } from "@prisma/client";
 import { generateUserPlan } from "../../utils/planGenerator.js";
+import { calculateCalories } from "../../utils/planGenerator.js";
 
 const prisma = new PrismaClient({
   log: ["error"],
 });
+
+const mapPlanMealsForClient = (plan) => {
+  const response = JSON.parse(JSON.stringify(plan));
+  response.calories = plan.totalCalories;
+
+  if (response.meals) {
+    response.meals = response.meals.map(m => ({
+      id: m.id,
+      mealId: m.meal?.id || m.mealId,
+      name: m.meal?.name,
+      calories: m.meal?.calories,
+      imageUrl: m.meal?.imageUrl,
+      time: m.meal?.time,
+      dayNumber: m.dayNumber,
+      multiplier: m.multiplier
+    }));
+  }
+
+  return response;
+};
 
 // ➕ Create Plan (السعرات تحسب تلقائياً)
 export const createPlan = async (req, res) => {
@@ -28,9 +49,30 @@ export const createPlan = async (req, res) => {
     });
 
     if (existingPlan) {
-      const response = JSON.parse(JSON.stringify(existingPlan));
-      response.calories = existingPlan.totalCalories;
-      return res.json(response);
+      const profile = await prisma.profile.findUnique({
+        where: { userId },
+        include: { chronicDiseases: true }
+      });
+
+      if (!profile || !profile.currentWeight || !profile.height) {
+        return res.status(400).json({
+          error: "Profile is incomplete. Please complete profile data first."
+        });
+      }
+
+      const expectedCalories = calculateCalories(
+        profile.currentWeight,
+        profile.height,
+        profile.age || 25,
+        profile.gender,
+        profile.activityLevel,
+        profile.goal
+      );
+
+      // Reuse existing active plan only if it still matches current profile target calories.
+      if (existingPlan.totalCalories === expectedCalories) {
+        return res.json(mapPlanMealsForClient(existingPlan));
+      }
     }
 
     const plan = await generateUserPlan(userId, startDate, endDate);
@@ -49,24 +91,7 @@ export const createPlan = async (req, res) => {
       }
     });
 
-    const response = JSON.parse(JSON.stringify(completePlan || plan));
-    response.calories = plan.totalCalories;
-    
-    // Minimal meal details for the list card
-    if (response.meals) {
-      response.meals = response.meals.map(m => ({
-        id: m.id,                       // ID of the PlanMeal entry
-        mealId: m.meal?.id || m.mealId, // ID of the Meal for details
-        name: m.meal?.name,
-        calories: m.meal?.calories,
-        imageUrl: m.meal?.imageUrl,
-        time: m.meal?.time,
-        dayNumber: m.dayNumber,
-        multiplier: m.multiplier
-      }));
-    }
-
-    res.json(response);
+    res.json(mapPlanMealsForClient(completePlan || plan));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
