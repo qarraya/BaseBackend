@@ -76,11 +76,33 @@ async function main() {
                 });
                 console.log(`- Created: ${mealReq.name} (${time}) with ${connections.length} restrictions`);
             } else {
+                const connections = mealReq.incompatibleDiseases
+                    .filter(diseaseName => diseaseMap[diseaseName])
+                    .map(diseaseName => ({
+                        chronicDiseases: {
+                            connect: { id: diseaseMap[diseaseName] }
+                        }
+                    }));
+
                 await prisma.meal.update({
                     where: { id: existing.id },
-                    data: { imageUrl: mealReq.imageUrl }
+                    data: {
+                        name: mealReq.name,
+                        calories: mealReq.calories,
+                        portion: mealReq.portion,
+                        proteins: mealReq.proteins,
+                        fats: mealReq.fats,
+                        carbs: mealReq.carbs,
+                        ingredients: mealReq.ingredients,
+                        imageUrl: mealReq.imageUrl,
+                        time: time,
+                        chromicDiseases: {
+                            deleteMany: {},
+                            create: connections
+                        }
+                    }
                 });
-                console.log(`- Updated imageUrl for: ${mealReq.name}`);
+                console.log(`- Updated meal: ${mealReq.name}`);
             }
         }
     }
