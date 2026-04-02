@@ -26,10 +26,13 @@ export const calculateCalories = (weight, height, age, gender, activityLevel, go
     VERY_ACTIVE: 1.9,
   };
 
-  let calories = bmr * (activityMultipliers[a] || 1.2);
+  // ✅ التعديل هون: نحسب الـ maintenance أولًا
+  const maintenanceCalories = bmr * (activityMultipliers[a] || 1.2);
 
-  if (gl === "LOSE") calories -= 500;
-  if (gl === "GAIN") calories += 500;
+  let calories = maintenanceCalories;
+
+  if (gl === "LOSE") calories = maintenanceCalories - 500;
+  else if (gl === "GAIN") calories = maintenanceCalories + 500;
 
   return Math.round(calories);
 };
