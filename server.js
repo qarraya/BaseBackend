@@ -13,8 +13,10 @@ import planRoutes from "./controllers/plan/Plan.Routes.js";
 import profileRoutes from "./controllers/profile/Profile.Routes.js";
 import dashboardRoutes from "./controllers/dashboard/Dashboard.Routes.js";
 import settingsRoutes from "./controllers/settings/Settings.Routes.js";
+import notificationsRoutes from "./controllers/notifications/Notifications.Routes.js";
 
-
+// Initialize scheduled background jobs
+import "./jobs/cronJobs.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -74,6 +76,7 @@ app.use("/api/plan", planRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/notifications", notificationsRoutes);
 
 
 

@@ -33,6 +33,8 @@ const mealCategories = {
 };
 
 async function main() {
+    console.log("Cleaning up existing meals...");
+    await prisma.meal.deleteMany({});
     console.log("Seeding meals...");
 
     // 1- Fetch all diseases to get their IDs

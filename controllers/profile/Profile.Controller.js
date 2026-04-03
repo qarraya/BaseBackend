@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { generateUserPlan } from "../../utils/planGenerator.js";
+import { createSystemNotification } from "../../utils/notificationService.js";
 
 const prisma = new PrismaClient();
 
@@ -91,6 +92,14 @@ export const createProfile = async (req, res) => {
     } catch (planError) {
       console.error("Automatic Plan Generation Failed on Profile Create:", planError);
     }
+
+    /* ------------------ Send Notification ------------------ */
+    await createSystemNotification(
+      userId,
+      "تم حفظ بياناتك بنجاح! 📊",
+      "تم الإرسال بنجاح! لقد تم تحديث بياناتك الصحية وتجهيز خطتك الغذائية.",
+      "SUCCESS"
+    );
 
     res.status(201).json({
       message: "Profile saved successfully",
@@ -236,15 +245,43 @@ export const updateProfile = async (req, res) => {
       },
     });
 
-    /* ------------------ Trigger Automatic Plan Generation ------------------ */
+    /* ------------------ Trigger Automatic Plan Generation & Notifications ------------------ */
     try {
-      // Find userId for this profile to generate plan
-      const profileToUpdate = await prisma.profile.findUnique({ where: { id: Number(id) } });
-      if (profileToUpdate) {
-        await generateUserPlan(profileToUpdate.userId);
+      // Fetch old profile for weight comparison
+      const oldProfile = await prisma.profile.findUnique({ where: { id: Number(id) } });
+      
+      if (oldProfile) {
+        // Trigger plan generation (already part of existing code)
+        await generateUserPlan(oldProfile.userId);
+
+        const newWeight = Number(currentWeight);
+        const oldWeight = oldProfile.currentWeight;
+        const userGoal = goal || oldProfile.goal;
+
+        let achievementMessage = "لقد قمت بتحديث بياناتك بنجاح وتم إعادة ضبط خطتك بناءً على ذلك.";
+        let achievementTitle = "تم تحديث بياناتك بنجاح! 📊";
+
+        // Check for progress achievement
+        if (newWeight && oldWeight) {
+          if (userGoal === "LOSE" && newWeight < oldWeight) {
+            achievementTitle = "إنجاز رائع! نزل وزنك 🎉";
+            achievementMessage = `لقد خسرت ${Math.abs(oldWeight - newWeight).toFixed(1)} كغم من وزنك! استمر في الالتزام بخطتك للوصول لهدفك. 💪`;
+          } else if (userGoal === "GAIN" && newWeight > oldWeight) {
+            achievementTitle = "إنجاز كفؤ! زاد وزنك 💪";
+            achievementMessage = `لقد نجحت في زيادة ${Math.abs(newWeight - oldWeight).toFixed(1)} كغم! أنت تقترب من هدفك في التضخيم. 🔥`;
+          }
+        }
+
+        /* ------------------ Send Notification ------------------ */
+        await createSystemNotification(
+          oldProfile.userId,
+          achievementTitle,
+          achievementMessage,
+          "SUCCESS"
+        );
       }
     } catch (planError) {
-      console.error("Automatic Plan Generation Failed on Profile Update:", planError);
+      console.error("Automatic Plan Generation/Notification Failed on Profile Update:", planError);
     }
 
     res.status(200).json({

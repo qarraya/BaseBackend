@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { generateUserPlan } from "../../utils/planGenerator.js";
+import { createSystemNotification } from "../../utils/notificationService.js";
 
 dotenv.config();
 
@@ -114,6 +115,14 @@ export const signUp = async (req, res) => {
       console.error("Automatic Plan Generation Failed on SignUp:", planError);
       // We don't block signup if plan generation fails, but we log it.
     }
+
+    /* ------------------ Send Welcome Notification ------------------ */
+    await createSystemNotification(
+      result.user.id,
+      "مرحباً بك في التطبيق! 🎉",
+      "تم إنشاء حسابك بنجاح. نتمنى لك رحلة صحية موفقة.",
+      "SUCCESS"
+    );
 
     /* ------------------ Generate JWT ------------------ */
     const accessToken = jwt.sign(
