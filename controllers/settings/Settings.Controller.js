@@ -201,3 +201,56 @@ export const updateAccountSettings = async (req, res) => {
         return res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
 };
+
+// POST /api/settings/questions
+export const createQuestion = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { category, question } = req.body;
+
+        if (!question) {
+            return res.status(400).json({ success: false, message: "Question content is required" });
+        }
+
+        const newQuestion = await prisma.question.create({
+            data: {
+                userId,
+                category,
+                question,
+                status: "PENDING"
+            }
+        });
+
+        res.status(201).json({ 
+            success: true, 
+            message: "Question sent successfully! 🚀", 
+            question: newQuestion 
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+};
+
+// GET /api/settings/account
+export const getAccountSettings = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                createdAt: true
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        res.status(200).json({ success: true, user });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Server error", error: error.message });
+    }
+};
