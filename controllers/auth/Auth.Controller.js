@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { generateUserPlan } from "../../utils/planGenerator.js";
 import { createSystemNotification } from "../../utils/notificationService.js";
+import { sendPasswordResetOTP } from "../../utils/mailService.js";
 
 dotenv.config();
 
@@ -357,5 +358,146 @@ export const logOut = (req, res) => {
     return res.status(500).json({
       message: "Internal server error.",
     });
+  }
+};
+
+/* -------------------------------------------------------------------------- */
+/*                          PASSWORD RECOVERY FLOW                            */
+/* -------------------------------------------------------------------------- */
+
+// 1. FORGOT PASSWORD - Send OTP
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required." });
+    }
+
+    // 1. Check if user exists
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ message: "User with this email does not exist." });
+    }
+
+    // 2. Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // 3. Hash OTP with bcrypt
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
+    // 4. Save to DB with 10-min expiry
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetCode: hashedOtp,
+        resetCodeExpires: expires,
+      },
+    });
+
+    // 5. Send Email
+    await sendPasswordResetOTP(email, otp);
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP has been sent to your email.",
+    });
+  } catch (error) {
+    console.error("ForgotPassword Error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+// 2. VERIFY OTP - Check if code is valid
+export const verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP are required." });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || !user.resetCode || !user.resetCodeExpires) {
+      return res.status(400).json({ message: "Invalid request or OTP expired." });
+    }
+
+    // Check expiry
+    if (new Date() > user.resetCodeExpires) {
+      return res.status(400).json({ message: "OTP has expired." });
+    }
+
+    // Compare hashed OTP
+    const isMatch = await bcrypt.compare(otp, user.resetCode);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid OTP code." });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP verified correctly. You can now reset your password.",
+    });
+  } catch (error) {
+    console.error("VerifyOTP Error:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+// 3. RESET PASSWORD - Finalize the reset
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword, confirmPassword } = req.body;
+
+    if (!email || !otp || !newPassword || !confirmPassword) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match." });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || !user.resetCode || !user.resetCodeExpires) {
+      return res.status(400).json({ message: "Invalid reset session." });
+    }
+
+    // Verify OTP again for security
+    const isMatch = await bcrypt.compare(otp, user.resetCode);
+    const isNotExpired = new Date() <= user.resetCodeExpires;
+
+    if (!isMatch || !isNotExpired) {
+      return res.status(400).json({ message: "OTP is invalid or expired." });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user and clear reset fields
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetCode: null,
+        resetCodeExpires: null,
+      },
+    });
+
+    // Send notification
+    await createSystemNotification(
+      user.id,
+      "تم تغيير كلمة المرور 🔐",
+      "لقد قمت بتغيير كلمة المرور الخاصة بك بنجاح. إذا لم تكن أنت، يرجى مراجعة الدعم.",
+      "SUCCESS"
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Password has been reset successfully. You can now login.",
+    });
+  } catch (error) {
+    console.error("ResetPassword Error:", error);
+    return res.status(500).json({ message: "Internal server error." });
   }
 };
