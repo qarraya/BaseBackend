@@ -406,7 +406,11 @@ export const forgotPassword = async (req, res) => {
     });
   } catch (error) {
     console.error("ForgotPassword Error:", error);
-    return res.status(500).json({ message: "Internal server error." });
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message, // Temporarily exposé the error for debugging
+    });
   }
 };
 
