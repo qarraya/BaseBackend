@@ -27,7 +27,7 @@ const mealCategories = {
     SNACK: [
         { name: "تفاح ولوز", calories: 193, portion: "150غ", fats: 9, proteins: 6, carbs: 22, ingredients: ["تفاحة متوسطة مقطعة", "20 غ لوز ني", "5غ عسل (اختياري)", "رشة قرفة"], imageUrl: "https://www.hintofhealthy.com/wp-content/uploads/2020/03/Peanut-butter-apple-nachos.jpg", incompatibleDiseases: [] },
         { name: "مكسرات مشكلة", calories: 222, portion: "30غ", fats: 18, proteins: 7, carbs: 8, ingredients: ["30غ مكسرات غير مملحة (كاجو، جوز، لوز)"], imageUrl: "https://i0.wp.com/images-prod.healthline.com/hlcmsresource/images/mixed-nuts-in-bowl.jpg?w=1155&h=1528", incompatibleDiseases: [] },
-        { name: "زبادي سادة", calories: 108, portion: "150غ", fats: 4, proteins: 8, carbs: 10, ingredients: ["علبة زبادي 150غ"], imageUrl: "https://www.karlijnskitchen.com/wp-content/uploads/2023/04/Yoghurt-maken-in-de-crockpot-express-2.jpg", incompatibleDiseases: [] },
+        { name: "زبادي سادة", calories: 108, portion: "150غ", fats: 4, proteins: 8, carbs: 10, ingredients: ["علبة زبادي 150غ"], imageUrl: "https://upload.wikimedia.org/wikipedia/commons/2/23/Cacik-1.jpg", incompatibleDiseases: [] },
         { name: "تمر وجوز", calories: 242, portion: "50غ", fats: 10, proteins: 3, carbs: 35, ingredients: ["3 حبات تمر", "نصف كوب جوز"], imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQk6e9_SBEJzCfr8bXIQrRsPSZ6BP5INeU-Zw&s", incompatibleDiseases: ["السكري"] }
     ]
 };

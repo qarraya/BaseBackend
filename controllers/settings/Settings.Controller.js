@@ -23,7 +23,11 @@ export const getMyNotifications = async (req, res) => {
             where: { userId },
             orderBy: { createdAt: 'desc' }
         });
-        res.status(200).json({ success: true, notifications });
+        res.status(200).json({ 
+            success: true, 
+            count: notifications.length,
+            notifications 
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: "Server error", error: error.message });
     }

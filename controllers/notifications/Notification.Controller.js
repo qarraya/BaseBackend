@@ -7,16 +7,21 @@ const prisma = new PrismaClient();
 export const getMyNotifications = async (req, res) => {
     try {
         const userId = req.user.id;
+        console.log(`Fetching notifications for user: ${userId}`);
 
         const notifications = await prisma.notification.findMany({
             where: { userId },
             orderBy: { createdAt: "desc" },
         });
 
-        res.status(200).json(notifications);
+        res.status(200).json({
+            success: true,
+            count: notifications.length,
+            notifications
+        });
     } catch (error) {
         console.error("Get Notifications Error:", error);
-        res.status(500).json({ message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error" });
     }
 };
 
@@ -26,9 +31,8 @@ export const sendNotificationToUser = async (req, res) => {
     try {
         const { userId, title, message, type } = req.body;
 
-        // تحقق بسيط
         if (!userId || !title || !message || !type) {
-            return res.status(400).json({ message: "All fields are required" });
+            return res.status(400).json({ success: false, message: "All fields are required" });
         }
 
         const notification = await prisma.notification.create({
@@ -36,16 +40,17 @@ export const sendNotificationToUser = async (req, res) => {
                 userId,
                 title,
                 message,
-                type, // لازم يكون من enum
+                type,
             },
         });
 
         res.status(201).json({
+            success: true,
             message: "Notification sent successfully",
             notification,
         });
     } catch (error) {
         console.error("Send Notification Error:", error);
-        res.status(500).json({ message: "Server error" });
+        res.status(500).json({ success: false, message: "Server error" });
     }
 };
