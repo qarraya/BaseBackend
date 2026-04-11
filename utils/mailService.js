@@ -42,7 +42,6 @@ export const sendPasswordResetOTP = async (email, otp) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`OTP email sent successfully to ${email}`);
   } catch (error) {
     console.error("Failed to send OTP email:", error);
     throw new Error("Failed to send email. Please try again later.");
