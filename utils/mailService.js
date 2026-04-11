@@ -2,40 +2,31 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 dotenv.config();
 
-// Lazy transporter - created once on first use
 let transporter = null;
 
 const getTransporter = () => {
   if (transporter) return transporter;
 
   transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,        // ✅ Port 587 works on Render (465 is often blocked)
-    secure: false,    // ✅ false for STARTTLS (not SSL)
+    host: "74.125.133.108", // ✅ Gmail SMTP IPv4 direct IP (no DNS lookup)
+    port: 587,
+    secure: false,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
     tls: {
-      rejectUnauthorized: true,
-      minVersion: "TLSv1.2",
+      rejectUnauthorized: false, // ✅ Must be false when using IP directly
+      servername: "smtp.gmail.com", // ✅ Still validate against Gmail's cert name
     },
     connectionTimeout: 15000,
     greetingTimeout: 15000,
     socketTimeout: 45000,
-    // Remove logger/debug in production to avoid log flooding
-    logger: process.env.NODE_ENV !== "production",
-    debug: process.env.NODE_ENV !== "production",
   });
 
   return transporter;
 };
 
-/**
- * Sends a password reset OTP to the user's email.
- * @param {string} email - Recipient email
- * @param {string} otp - The 6-digit OTP
- */
 export const sendPasswordResetOTP = async (email, otp) => {
   const mailOptions = {
     from: `"NutriFit Support" <${process.env.EMAIL_USER}>`,
@@ -62,12 +53,9 @@ export const sendPasswordResetOTP = async (email, otp) => {
     await transport.sendMail(mailOptions);
   } catch (error) {
     console.error("Failed to send OTP email:", error.message);
-
-    // Reset transporter on connection errors so it's recreated next attempt
-    if (error.code === "ECONNECTION" || error.code === "ETIMEDOUT") {
+    if (["ECONNECTION", "ETIMEDOUT", "ENETUNREACH"].includes(error.code)) {
       transporter = null;
     }
-
     throw new Error("Failed to send email. Please try again later.");
   }
 };
