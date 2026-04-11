@@ -405,11 +405,12 @@ export const forgotPassword = async (req, res) => {
       message: "OTP has been sent to your email.",
     });
   } catch (error) {
-    console.error("ForgotPassword Error:", error);
+    console.error("ForgotPassword Error (Full Stack):", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error.",
-      error: error.message, // Temporarily exposé the error for debugging
+      error: error.message,
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
     });
   }
 };
