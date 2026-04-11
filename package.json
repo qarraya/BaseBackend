@@ -10,8 +10,6 @@
     "build": "prisma generate",
     "postinstall": "prisma generate",
     "seed:meals": "node prisma/seedMeals.js"
-
-
   },
   "keywords": [],
   "author": "",
@@ -30,6 +28,7 @@
     "nodemon": "^3.1.14",
     "openai": "^6.33.0",
     "path": "^0.12.7",
-    "prisma": "^6.19.2"
+    "prisma": "^6.19.2",
+    "resend": "^6.10.0"
   }
 }
