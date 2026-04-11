@@ -19,7 +19,7 @@ export const sendPasswordResetOTP = async (email, otp) => {
     });
 
     const mailOptions = {
-      from: `"NutriFit Support" <${process.env.EMAIL_USER}>`,
+      from: process.env.EMAIL_USER,
       to: email,
       subject: "رمز التحقق لاستعادة كلمة المرور | Password Reset OTP",
       html: `
