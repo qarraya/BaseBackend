@@ -6,7 +6,7 @@ const mealCategories = {
     BREAKFAST: [
         { name: "زبادي يوناني مع التوت", calories: 221, portion: "200غ", fats: 8.3, proteins: 12.5, carbs: 24, ingredients: ["150غ زبادي يوناني", "50غ توت", "ملعقة عسل"], imageUrl: "https://images.unsplash.com/photo-1488477181946-6428a0291777", incompatibleDiseases: [] },
         { name: "شوفان بالحليب والموز", calories: 422, portion: "250غ", fats: 11.3, proteins: 14, carbs: 66, ingredients: ["نصف كوب شوفان", "كوب حليب", "موزة مقطعة"], imageUrl: "https://images.unsplash.com/photo-1517673400267-0251440c45dc", incompatibleDiseases: ["السكري"] },
-        { name: "بيض مسلوق مع خبز أسمر", calories: 296, portion: "150غ", fats: 12, proteins: 18, carbs: 29, ingredients: ["حبتين بيض مسلوق", "شريحتين خبز أسمر"], imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRHo5K9raOvO52pwudKc2fUcVod8SZ6gpzzkw&s", incompatibleDiseases: ["ارتفاع الكوليسترول"] },
+        { name: "بيض مسلوق مع خبز أسمر", calories: 296, portion: "150غ", fats: 12, proteins: 18, carbs: 29, ingredients: ["حبتين بيض مسلوق", "شريحتين خبز أسمر"], imageUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=1200&q=80", incompatibleDiseases: ["ارتفاع الكوليسترول"] },
         { name: "أومليت بالخضار", calories: 288, portion: "200غ", fats: 24, proteins: 13, carbs: 5, ingredients: ["حبتين بيض", "ربع كوب خضار مشكلة", "ملعقة زيت زيتون"], imageUrl: "https://www.mygorgeousrecipes.com/wp-content/uploads/2018/02/Vegetarian-Omelette-1.jpg", incompatibleDiseases: ["ارتفاع الكوليسترول"] },
         { name: "توست الأفوكادو", calories: 236, portion: "150غ", fats: 12, proteins: 5, carbs: 27, ingredients: ["شريحة خبز توست", "نصف حبة أفوكادو مهروسة", "رشة ملح وفلفل"], imageUrl: "https://cookingwithcoit.com/wp-content/uploads/2021/04/HERO_Avocado-Toast.jpg", incompatibleDiseases: [] }
     ],
@@ -18,17 +18,17 @@ const mealCategories = {
         { name: "مجدرة", calories: 397, portion: "350غ", fats: 5, proteins: 18, carbs: 70, ingredients: ["كوب عدس مطبوخ", "نصف كوب أرز مسلوق", "بصل مقلي", "بهارات"], imageUrl: "https://static01.nyt.com/images/2025/05/15/multimedia/ND-Mujadara-kzgm/ND-Mujadara-kzgm-mediumSquareAt3X.jpg", incompatibleDiseases: [] }
     ],
     DINNER: [
-        { name: "سمك السلمون المشوي مع الخضار", calories: 402, portion: "300غ", fats: 18, proteins: 35, carbs: 25, ingredients: ["شريحة سلمون", "كوب بروكلي وجزر", "ملعقة زيتون"], imageUrl: "https://static.vecteezy.com/system/resources/previews/050/897/358/non_2x/grilled-salmon-fillet-served-with-broccoli-and-quinoa-on-a-white-plate-photo.jpeg", incompatibleDiseases: [] },
+        { name: "سمك السلمون المشوي مع الخضار", calories: 402, portion: "300غ", fats: 18, proteins: 35, carbs: 25, ingredients: ["شريحة سلمون", "كوب بروكلي وجزر", "ملعقة زيتون"], imageUrl: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=1200&q=80", incompatibleDiseases: [] },
         { name: "تونة مع سلطة خضراء", calories: 262, portion: "250غ", fats: 10, proteins: 28, carbs: 15, ingredients: ["علبة تونة مصفاة من الزيت", "خس وجرجير", "عصير ليمون"], imageUrl: "https://img.youm7.com/ArticleImgs/2017/6/23/84512-%D8%B7%D8%B1%D9%8A%D9%82%D8%A9-%D8%B9%D9%85%D9%84-%D8%B3%D9%84%D8%B7%D8%A9%D8%A7-%D9%84%D8%AA%D9%88%D9%86%D8%A91.jpeg", incompatibleDiseases: ["ارتفاع ضغط الدم"] },
         { name: "صدر دجاج بالليمون والثوم", calories: 252, portion: "200غ", fats: 8, proteins: 35, carbs: 10, ingredients: ["150غ صدر دجاج", "عصير حبة ليمون", "حبتين ثوم مهروس"], imageUrl: "https://images.unsplash.com/photo-1532550907401-a500c9a57435", incompatibleDiseases: [] },
         { name: "جبنة قريش مع فواكه", calories: 225, portion: "200غ", fats: 5, proteins: 20, carbs: 25, ingredients: ["كوب جبنة قريش", "نصف تفاحة أو بطيخ", "رشة جوز"], imageUrl: "https://www.justfood.tv/big/0cheese%20fruits.jpg", incompatibleDiseases: ["أمراض الكلى المزمنة"] },
-        { name: "شوربة خضار دافئة", calories: 185, portion: "300غ", fats: 5, proteins: 5, carbs: 30, ingredients: ["كوب مرق", "جزر بطاطس كوسا", "ملح وفلفل"], imageUrl: "https://thefastrecipe.com/wp-content/uploads/2024/08/italian-zucchini-soup-rice.jpg", incompatibleDiseases: [] }
+        { name: "شوربة خضار دافئة", calories: 185, portion: "300غ", fats: 5, proteins: 5, carbs: 30, ingredients: ["كوب مرق", "جزر بطاطس كوسا", "ملح وفلفل"], imageUrl: "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=1200&q=80", incompatibleDiseases: [] }
     ],
     SNACK: [
-        { name: "تفاح ولوز", calories: 193, portion: "150غ", fats: 9, proteins: 6, carbs: 22, ingredients: ["تفاحة متوسطة مقطعة", "20 غ لوز ني", "5غ عسل (اختياري)", "رشة قرفة"], imageUrl: "https://www.hintofhealthy.com/wp-content/uploads/2020/03/Peanut-butter-apple-nachos.jpg", incompatibleDiseases: [] },
+        { name: "تفاح ولوز", calories: 193, portion: "150غ", fats: 9, proteins: 6, carbs: 22, ingredients: ["تفاحة متوسطة مقطعة", "20 غ لوز ني", "5غ عسل (اختياري)", "رشة قرفة"], imageUrl: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=1200&q=80", incompatibleDiseases: [] },
         { name: "مكسرات مشكلة", calories: 222, portion: "30غ", fats: 18, proteins: 7, carbs: 8, ingredients: ["30غ مكسرات غير مملحة (كاجو، جوز، لوز)"], imageUrl: "https://i0.wp.com/images-prod.healthline.com/hlcmsresource/images/mixed-nuts-in-bowl.jpg?w=1155&h=1528", incompatibleDiseases: [] },
-        { name: "زبادي سادة", calories: 108, portion: "150غ", fats: 4, proteins: 8, carbs: 10, ingredients: ["علبة زبادي 150غ"], imageUrl: "https://images.unsplash.com/photo-1571212435035-46c4edf7a8f4", incompatibleDiseases: [] },
-        { name: "تمر وجوز", calories: 242, portion: "50غ", fats: 10, proteins: 3, carbs: 35, ingredients: ["3 حبات تمر", "نصف كوب جوز"], imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQk6e9_SBEJzCfr8bXIQrRsPSZ6BP5INeU-Zw&s", incompatibleDiseases: ["السكري"] }
+        { name: "زبادي سادة", calories: 108, portion: "150غ", fats: 4, proteins: 8, carbs: 10, ingredients: ["علبة زبادي 150غ"], imageUrl: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=1200&q=80", incompatibleDiseases: [] },
+        { name: "تمر وجوز", calories: 242, portion: "50غ", fats: 10, proteins: 3, carbs: 35, ingredients: ["3 حبات تمر", "نصف كوب جوز"], imageUrl: "https://images.unsplash.com/photo-1604881991720-f91add269bed?w=1200&q=80", incompatibleDiseases: ["السكري"] }
     ]
 };
 
