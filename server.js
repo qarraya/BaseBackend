@@ -1,9 +1,7 @@
-import dotenv from "dotenv";
+import "./loadEnv.js";
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-
-dotenv.config();
 
 import authRoutes from "./controllers/auth/Auth.Routes.js";
 import diseasesRoutes from "./controllers/diseases/Diseases.Routes.js";
@@ -14,6 +12,7 @@ import profileRoutes from "./controllers/profile/Profile.Routes.js";
 import dashboardRoutes from "./controllers/dashboard/Dashboard.Routes.js";
 import settingsRoutes from "./controllers/settings/Settings.Routes.js";
 import notificationsRoutes from "./controllers/notifications/Notifications.Routes.js";
+import chatRoutes from "./controllers/chat/Chat.Routes.js";
 
 // Initialize scheduled background jobs
 import "./jobs/cronJobs.js";
@@ -77,8 +76,7 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/notifications", notificationsRoutes);
-
-
+app.use("/api/chat", chatRoutes);
 
 
 
@@ -86,7 +84,7 @@ app.use("/api/notifications", notificationsRoutes);
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    message: "Backend is running successfully 🚀",
+    message: "Backend is running successfully \u{1F680}",
   });
 });
 
