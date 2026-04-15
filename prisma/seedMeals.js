@@ -1,7 +1,9 @@
 import { PrismaClient } from "@prisma/client";
+import { kcalFromMacros } from "../utils/macros.js";
 
 const prisma = new PrismaClient();
 
+// calories: قيمة مرجعية (4P + 4C + 9F)؛ ما يُحفظ في DB يُشتق دائماً من الماكروز عبر kcalFromMacros
 const mealCategories = {
     BREAKFAST: [
         { name: "زبادي يوناني مع التوت", calories: 221, portion: "200غ", fats: 8.3, proteins: 12.5, carbs: 24, ingredients: ["150غ زبادي يوناني", "50غ توت", "ملعقة عسل"], imageUrl: "https://images.unsplash.com/photo-1488477181946-6428a0291777", incompatibleDiseases: [] },
@@ -46,6 +48,12 @@ async function main() {
 
     for (const [time, meals] of Object.entries(mealCategories)) {
         for (const mealReq of meals) {
+            const calories = kcalFromMacros(mealReq.proteins, mealReq.carbs, mealReq.fats);
+            if (mealReq.calories !== calories) {
+                console.warn(
+                    `[seedMeals] "${mealReq.name}": calories في الملف=${mealReq.calories} ≠ من الماكروز=${calories} — يُحفظ ${calories}`
+                );
+            }
             const existing = await prisma.meal.findFirst({
                 where: { name: mealReq.name }
             });
@@ -63,7 +71,7 @@ async function main() {
                 await prisma.meal.create({
                     data: {
                         name: mealReq.name,
-                        calories: mealReq.calories,
+                        calories,
                         portion: mealReq.portion,
                         proteins: mealReq.proteins,
                         fats: mealReq.fats,
@@ -76,7 +84,7 @@ async function main() {
                         }
                     }
                 });
-                console.log(`- Created: ${mealReq.name} (${time}) with ${connections.length} restrictions`);
+                console.log(`- Created: ${mealReq.name} (${time}) kcal=${calories}, ${connections.length} restrictions`);
             } else {
                 const connections = mealReq.incompatibleDiseases
                     .filter(diseaseName => diseaseMap[diseaseName])
@@ -90,7 +98,7 @@ async function main() {
                     where: { id: existing.id },
                     data: {
                         name: mealReq.name,
-                        calories: mealReq.calories,
+                        calories,
                         portion: mealReq.portion,
                         proteins: mealReq.proteins,
                         fats: mealReq.fats,
@@ -104,7 +112,7 @@ async function main() {
                         }
                     }
                 });
-                console.log(`- Updated meal: ${mealReq.name}`);
+                console.log(`- Updated meal: ${mealReq.name} kcal=${calories}`);
             }
         }
     }
