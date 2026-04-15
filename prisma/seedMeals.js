@@ -1,3 +1,4 @@
+import "../loadEnv.js";
 import { PrismaClient } from "@prisma/client";
 import { kcalFromMacros } from "../utils/macros.js";
 
@@ -35,9 +36,9 @@ const mealCategories = {
 };
 
 async function main() {
-    console.log("Cleaning up existing meals...");
-    await prisma.meal.deleteMany({});
-    console.log("Seeding meals...");
+    // لا نستخدم deleteMany: حذف الوجبات يزيل PlanMeal (Cascade) ويكسر خطط المستخدمين.
+    // التحديث يتم بمطابقة الاسم: create أو update فقط.
+    console.log("Seeding meals (upsert by name)...");
 
     // 1- Fetch all diseases to get their IDs
     const allDiseases = await prisma.chronicDiseases.findMany();
