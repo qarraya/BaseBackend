@@ -16,6 +16,7 @@ import chatRoutes from "./controllers/chat/Chat.Routes.js";
 import { verifyAnyoneHasAccount } from "./middleware/verifyToken.js";
 import { generatePlan } from "./controllers/plan/Plan.Controller.js";
 import subscriptionRoutes from "./controllers/subscription/Subscription.Routes.js";
+import progressRoutes from "./controllers/progress/Progress.Routes.js";
 
 // Initialize scheduled background jobs
 import "./jobs/cronJobs.js";
@@ -81,6 +82,7 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/subscription", subscriptionRoutes);
+app.use("/api/progress", progressRoutes);
 
 /**
  * Plan generation (entitlement + atomic reservation in services).

@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { generateUserPlan } from "../../utils/planGenerator.js";
 import { createSystemNotification } from "../../utils/notificationService.js";
+import * as progressService from "../../services/progress.service.js";
 
 const prisma = new PrismaClient();
 
@@ -52,6 +53,13 @@ export const createProfile = async (req, res) => {
         }))
         : [];
 
+    const priorProfile = await prisma.profile.findUnique({
+      where: { userId },
+      select: { currentWeight: true },
+    });
+
+    const newWeightVal = Number(currentWeight);
+
     const profile = await prisma.profile.upsert({
       where: { userId },
 
@@ -85,6 +93,22 @@ export const createProfile = async (req, res) => {
         },
       },
     });
+
+    /* ------------------ Progress tracking (weight) ------------------ */
+    try {
+      if (!priorProfile) {
+        await progressService.recordWeightSnapshot(userId, newWeightVal, newWeightVal);
+      } else if (priorProfile.currentWeight == null) {
+        await progressService.recordWeightSnapshot(userId, newWeightVal, newWeightVal);
+      } else {
+        const prev = Number(priorProfile.currentWeight);
+        if (newWeightVal !== prev) {
+          await progressService.recordWeightSnapshot(userId, newWeightVal, prev);
+        }
+      }
+    } catch (progressErr) {
+      console.error("Progress record on profile upsert failed:", progressErr);
+    }
 
     /* ------------------ Trigger Automatic Plan Generation ------------------ */
     try {
@@ -199,6 +223,7 @@ export const getAllProfiles = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const { id } = req.params;
+    const profileId = Number(id);
 
     const {
       gender,
@@ -209,6 +234,14 @@ export const updateProfile = async (req, res) => {
       activityLevel,
       chronicDiseasesIds,
     } = req.body;
+
+    const existing = await prisma.profile.findUnique({
+      where: { id: profileId },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ message: "Profile not found" });
+    }
 
     const updateData = {
       gender,
@@ -224,17 +257,35 @@ export const updateProfile = async (req, res) => {
         deleteMany: {},
         create:
           chronicDiseasesIds && Array.isArray(chronicDiseasesIds)
-            ? chronicDiseasesIds.map((id) => ({
+            ? chronicDiseasesIds.map((cid) => ({
               chronicDisease: {
-                connect: { id: Number(id) },
+                connect: { id: Number(cid) },
               },
             }))
             : [],
       };
     }
 
+    if (currentWeight !== undefined && currentWeight !== null) {
+      try {
+        const newW = Number(currentWeight);
+        if (!Number.isNaN(newW)) {
+          if (existing.currentWeight == null) {
+            await progressService.recordWeightSnapshot(existing.userId, newW, newW);
+          } else {
+            const oldW = Number(existing.currentWeight);
+            if (!Number.isNaN(oldW) && newW !== oldW) {
+              await progressService.recordWeightSnapshot(existing.userId, newW, oldW);
+            }
+          }
+        }
+      } catch (progressErr) {
+        console.error("Progress record on profile update failed:", progressErr);
+      }
+    }
+
     const updatedProfile = await prisma.profile.update({
-      where: { id: Number(id) },
+      where: { id: profileId },
       data: updateData,
       include: {
         chronicDiseases: {
@@ -247,16 +298,14 @@ export const updateProfile = async (req, res) => {
 
     /* ------------------ Trigger Automatic Plan Generation & Notifications ------------------ */
     try {
-      // Fetch old profile for weight comparison
-      const oldProfile = await prisma.profile.findUnique({ where: { id: Number(id) } });
-      
-      if (oldProfile) {
-        // Trigger plan generation (already part of existing code)
-        await generateUserPlan(oldProfile.userId);
+      await generateUserPlan(existing.userId);
 
-        const newWeight = Number(currentWeight);
-        const oldWeight = oldProfile.currentWeight;
-        const userGoal = goal || oldProfile.goal;
+      const newWeight =
+        currentWeight !== undefined && currentWeight !== null
+          ? Number(currentWeight)
+          : updatedProfile.currentWeight;
+      const oldWeight = existing.currentWeight;
+      const userGoal = goal ?? existing.goal;
 
         let achievementMessage = "لقد قمت بتحديث بياناتك بنجاح وتم إعادة ضبط خطتك بناءً على ذلك.";
         let achievementTitle = "تم تحديث بياناتك بنجاح! 📊";
@@ -272,14 +321,12 @@ export const updateProfile = async (req, res) => {
           }
         }
 
-        /* ------------------ Send Notification ------------------ */
-        await createSystemNotification(
-          oldProfile.userId,
-          achievementTitle,
-          achievementMessage,
-          "SUCCESS"
-        );
-      }
+      await createSystemNotification(
+        existing.userId,
+        achievementTitle,
+        achievementMessage,
+        "SUCCESS"
+      );
     } catch (planError) {
       console.error("Automatic Plan Generation/Notification Failed on Profile Update:", planError);
     }
@@ -294,6 +341,116 @@ export const updateProfile = async (req, res) => {
       message: "Server error",
       error: error.message,
     });
+  }
+};
+
+/* ------------------ Update My Profile (Dynamic) ------------------ */
+export const updateMyProfile = async (req, res) => {
+  try {
+    const userId = req.user.id; // From Token
+
+    const {
+      gender,
+      age,
+      height,
+      currentWeight,
+      goal,
+      activityLevel,
+      chronicDiseasesIds,
+    } = req.body;
+
+    // Find the profile for this user
+    const existing = await prisma.profile.findUnique({
+      where: { userId },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ message: "Profile not found" });
+    }
+
+    // Reuse the update logic (shared with updateProfile)
+    const updateData = {
+      gender,
+      age: age ? Number(age) : undefined,
+      height: height ? Number(height) : undefined,
+      currentWeight: currentWeight ? Number(currentWeight) : undefined,
+      goal,
+      activityLevel,
+    };
+
+    if (chronicDiseasesIds !== undefined) {
+      updateData.chronicDiseases = {
+        deleteMany: {},
+        create: (chronicDiseasesIds && Array.isArray(chronicDiseasesIds))
+          ? chronicDiseasesIds.map((cid) => ({
+            chronicDisease: { connect: { id: Number(cid) } },
+          }))
+          : [],
+      };
+    }
+
+    // Progress record logic
+    if (currentWeight !== undefined && currentWeight !== null) {
+      try {
+        const newW = Number(currentWeight);
+        if (!Number.isNaN(newW)) {
+          if (existing.currentWeight == null) {
+            await progressService.recordWeightSnapshot(userId, newW, newW);
+          } else {
+            const oldW = Number(existing.currentWeight);
+            if (!Number.isNaN(oldW) && newW !== oldW) {
+              await progressService.recordWeightSnapshot(userId, newW, oldW);
+            }
+          }
+        }
+      } catch (progressErr) {
+        console.error("Progress record on profile update failed:", progressErr);
+      }
+    }
+
+    const updatedProfile = await prisma.profile.update({
+      where: { id: existing.id },
+      data: updateData,
+      include: {
+        chronicDiseases: {
+          include: { chronicDisease: true },
+        },
+      },
+    });
+
+    // Notify & Regenerate Plan
+    try {
+      await generateUserPlan(userId);
+
+      const newWeight = currentWeight !== undefined && currentWeight !== null ? Number(currentWeight) : updatedProfile.currentWeight;
+      const oldWeight = existing.currentWeight;
+      const userGoal = goal ?? existing.goal;
+
+      let achievementMessage = "لقد قمت بتحديث بياناتك بنجاح وتم إعادة ضبط خطتك بناءً على ذلك.";
+      let achievementTitle = "تم تحديث بياناتك بنجاح! 📊";
+
+      if (newWeight && oldWeight) {
+        if (userGoal === "LOSE" && newWeight < oldWeight) {
+          achievementTitle = "إنجاز رائع! نزل وزنك 🎉";
+          achievementMessage = `لقد خسرت ${Math.abs(oldWeight - newWeight).toFixed(1)} كغم من وزنك! استمر في الالتزام بخطتك للوصول لهدفك. 💪`;
+        } else if (userGoal === "GAIN" && newWeight > oldWeight) {
+          achievementTitle = "إنجاز كفؤ! زاد وزنك 💪";
+          achievementMessage = `لقد نجحت في زيادة ${Math.abs(newWeight - oldWeight).toFixed(1)} كغم! أنت تقترب من هدفك في التضخيم. 🔥`;
+        }
+      }
+
+      await createSystemNotification(userId, achievementTitle, achievementMessage, "SUCCESS");
+    } catch (err) {
+      console.error("Post-update tasks failed:", err);
+    }
+
+    res.status(200).json({
+      message: "Profile updated successfully (me)",
+      profile: updatedProfile,
+    });
+  } catch (error) {
+    console.error("updateMyProfile Error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
