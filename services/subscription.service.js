@@ -1,0 +1,184 @@
+import { PLAN_GEN_REASON } from "../constants/subscriptionReasons.js";
+import {
+  FIRST_MONTH_FREE_MESSAGE_AR,
+  SUBSCRIPTION_EXPIRED_MESSAGE_AR,
+  FREE_TRIAL_EXHAUSTED_MESSAGE_AR,
+} from "../constants/subscriptionMessages.js";
+import * as userSubscriptionRepo from "../repositories/userSubscription.repository.js";
+
+/**
+ * Whether the user currently has an unexpired subscription *window*.
+ * Source of truth: subscriptionEndDate > now only.
+ * If `isSubscribed` is true but the end date is in the past, this returns false.
+ */
+export function hasActiveSubscriptionWindow(user) {
+  if (!user?.subscriptionEndDate) return false;
+  return user.subscriptionEndDate > new Date();
+}
+
+/**
+ * Pure eligibility from a User entitlement row (no Plan table, no extra queries).
+ * Order: (1) valid subscription window, (2) free credits, (3) deny.
+ */
+export function evaluatePlanGenerationFromUserRow(user) {
+  if (!user) {
+    return {
+      allowed: false,
+      reason: PLAN_GEN_REASON.SUBSCRIPTION_REQUIRED,
+      userNotFound: true,
+      messageAr: FREE_TRIAL_EXHAUSTED_MESSAGE_AR,
+    };
+  }
+  if (hasActiveSubscriptionWindow(user)) {
+    return { allowed: true, reason: PLAN_GEN_REASON.SUBSCRIBED };
+  }
+  if (user.freePlansCount > 0) {
+    return { allowed: true, reason: PLAN_GEN_REASON.FREE_PLAN };
+  }
+  return { 
+    allowed: false, 
+    reason: PLAN_GEN_REASON.SUBSCRIPTION_REQUIRED,
+    messageAr: user.subscriptionEndDate ? SUBSCRIPTION_EXPIRED_MESSAGE_AR : FREE_TRIAL_EXHAUSTED_MESSAGE_AR
+  };
+}
+
+/**
+ * Read-only gate for UI or diagnostics (does not decrement freePlansCount).
+ */
+export async function canUserGeneratePlan(userId) {
+  const user = await userSubscriptionRepo.findUserEntitlementById(userId);
+  return evaluatePlanGenerationFromUserRow(user);
+}
+
+/**
+ * Snapshot of User entitlement after an operation (for API responses / UI).
+ * Values reflect current DB state (e.g. freePlansRemaining after a decrement).
+ */
+export async function getUserEntitlementSummary(userId) {
+  const user = await userSubscriptionRepo.findUserEntitlementById(userId);
+  if (!user) return null;
+
+  const hasActiveSubscription = hasActiveSubscriptionWindow(user);
+  const freePlansRemaining = user.freePlansCount;
+
+  return {
+    hasActiveSubscription,
+    subscriptionEndDate: user.subscriptionEndDate,
+    freePlansRemaining,
+    /** Whether another generate would pass the gate right now (subscription window or credits). */
+    canGenerateAgain: hasActiveSubscription || freePlansRemaining > 0,
+  };
+}
+
+/**
+ * Atomic reservation: confirms subscription window or consumes exactly one free credit.
+ */
+export async function reservePlanGenerationEntitlement(userId) {
+  const res = await userSubscriptionRepo.transactionallyReservePlanGeneration(userId);
+
+  if (!res.userExists) {
+    return {
+      allowed: false,
+      reason: PLAN_GEN_REASON.SUBSCRIPTION_REQUIRED,
+      userNotFound: true,
+      messageAr: FREE_TRIAL_EXHAUSTED_MESSAGE_AR,
+    };
+  }
+
+  if (!res.ok) {
+    // If reason is free plan, it means they exhausted free. If subscription required, it means subscription expired.
+    // However, user is not fully loaded here, so let's default to the appropriate error in entitlement middleware
+    return { allowed: false, reason: res.reason };
+  }
+
+  return { allowed: true, reason: res.reason };
+}
+
+/**
+ * Roll back one free credit if generation failed after a free_plan reservation.
+ * No-op for subscribed path (reservedReason !== free_plan).
+ */
+export async function refundFreePlanCreditIfNeeded(userId, reservedReason) {
+  if (reservedReason === PLAN_GEN_REASON.FREE_PLAN) {
+    await userSubscriptionRepo.incrementFreePlansCount(userId, 1);
+  }
+}
+
+/**
+ * Start or renew subscription from today for N days (e.g. payment webhook).
+ * Sets `isSubscribed` for product semantics; runtime access still uses `subscriptionEndDate` only.
+ */
+export async function activateUserSubscription(userId, durationDays = 30) {
+  const days = Math.max(1, Number(durationDays) || 30);
+  const subscriptionEndDate = new Date();
+  subscriptionEndDate.setDate(subscriptionEndDate.getDate() + days);
+
+  await userSubscriptionRepo.setActiveSubscription(userId, subscriptionEndDate, true);
+
+  return { isSubscribed: true, subscriptionEndDate };
+}
+
+/**
+ * Cancel / clear paid window (e.g. dev reset after testing activate).
+ * Trial balance `freePlansCount` is left unchanged.
+ */
+export async function cancelUserSubscription(userId) {
+  await userSubscriptionRepo.clearSubscriptionWindow(userId);
+  return { isSubscribed: false, subscriptionEndDate: null };
+}
+
+/** Admin/promo: add complimentary generations without touching Plan rows. */
+export async function giftFreePlanCredits(userId, count = 1) {
+  const n = Math.max(1, Number(count) || 1);
+  await userSubscriptionRepo.incrementFreePlansCount(userId, n);
+  return { added: n };
+}
+
+/**
+ * Combined snapshot for GET /api/subscription/me (dev + app profile).
+ */
+export async function getSubscriptionStatusForClient(userId) {
+  const row = await userSubscriptionRepo.findUserSubscriptionDisplay(userId);
+  if (!row) return null;
+
+  const now = new Date();
+  const hasActiveSubscription = hasActiveSubscriptionWindow(row);
+  const freePlansRemaining = row.freePlansCount;
+  const canGenerateAgain = hasActiveSubscription || freePlansRemaining > 0;
+
+  /** Had an end date set and it is no longer in the future (subscription “period” over). */
+  const subscriptionWindowExpired =
+    row.subscriptionEndDate != null && row.subscriptionEndDate <= now;
+
+  /** Cannot call generate-plan without paying / renewing / receiving credits. */
+  const needsSubscriptionToGenerate = !canGenerateAgain;
+
+  /** Banner for plan screen: first month free while user still has trial credit and no active sub. */
+  const planPageMessageAr =
+    !hasActiveSubscription && freePlansRemaining > 0 ? FIRST_MONTH_FREE_MESSAGE_AR : null;
+
+  return {
+    isSubscribed: row.isSubscribed,
+    subscriptionEndDate: row.subscriptionEndDate,
+    freePlansRemaining,
+    hasActiveSubscription,
+    subscriptionWindowExpired,
+    canGenerateAgain,
+    needsSubscriptionToGenerate,
+    messageAr: needsSubscriptionToGenerate 
+      ? (row.subscriptionEndDate ? SUBSCRIPTION_EXPIRED_MESSAGE_AR : FREE_TRIAL_EXHAUSTED_MESSAGE_AR) 
+      : null,
+    planPageMessageAr,
+  };
+}
+
+/**
+ * Same copy as `planPageMessageAr` from GET /subscription/me — for attaching to plan payloads.
+ */
+export async function getPlanPageMessageArForUser(userId) {
+  const row = await userSubscriptionRepo.findUserSubscriptionDisplay(userId);
+  if (!row) return null;
+  if (hasActiveSubscriptionWindow(row)) return null;
+  if (row.freePlansCount > 0) return FIRST_MONTH_FREE_MESSAGE_AR;
+  return null;
+}

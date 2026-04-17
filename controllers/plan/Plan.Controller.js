@@ -1,238 +1,125 @@
-import { PrismaClient } from "@prisma/client";
-import { generateUserPlan } from "../../utils/planGenerator.js";
-import { calculateCalories } from "../../utils/planGenerator.js";
+import { HttpError } from "../../errors/httpError.js";
+import * as planRepo from "../../repositories/plan.repository.js";
+import * as planService from "../../services/plan.service.js";
 
-const prisma = new PrismaClient({
-  log: ["error"],
-});
-
-const mapPlanMealsForClient = (plan) => {
-  const response = JSON.parse(JSON.stringify(plan));
-  response.calories = plan.totalCalories;
-
-  if (response.meals) {
-    response.meals = response.meals.map(m => ({
-      id: m.id,
-      mealId: m.meal?.id || m.mealId,
-      name: m.meal?.name,
-      calories: m.meal?.calories,
-      imageUrl: m.meal?.imageUrl,
-      time: m.meal?.time,
-      dayNumber: m.dayNumber,
-      multiplier: m.multiplier
-    }));
+/**
+ * Consistent JSON error shape for plan endpoints.
+ */
+function sendError(res, error) {
+  if (error instanceof HttpError) {
+    return res.status(error.statusCode).json({
+      success: false,
+      message: error.message,
+      ...error.extra,
+    });
   }
+  console.error("Plan controller error:", error);
+  return res.status(500).json({
+    success: false,
+    message: error.message || "Internal server error",
+  });
+}
 
-  return response;
+/**
+ * POST /generate-plan — authenticated user; entitlement enforced in services.
+ * Success body: `{ plan, entitlement }`.
+ * Body `startDate` / `endDate`: meal-plan calendar only — not the billing subscription period.
+ */
+export const generatePlan = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { startDate, endDate } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+        reason: "unauthorized",
+      });
+    }
+
+    const payload = await planService.generatePlanForUser({
+      userId,
+      startDate,
+      endDate,
+    });
+
+    return res.json(payload);
+  } catch (error) {
+    return sendError(res, error);
+  }
 };
 
-// ➕ Create Plan (السعرات تحسب تلقائياً)
 export const createPlan = async (req, res) => {
   try {
     const { startDate, endDate, userId } = req.body;
 
-    // Check if an active plan already exists (endDate >= today)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const existingPlan = await prisma.plan.findFirst({
-      where: {
-        userId,
-        endDate: { gte: today }
-      },
-      orderBy: { createdAt: "desc" },
-      include: {
-        meals: {
-          include: { meal: true }
-        }
-      }
+    const payload = await planService.createPlanForUser({
+      userId,
+      startDate,
+      endDate,
     });
 
-    if (existingPlan) {
-      const profile = await prisma.profile.findUnique({
-        where: { userId },
-        include: { chronicDiseases: true }
-      });
-
-      if (!profile || !profile.currentWeight || !profile.height) {
-        return res.status(400).json({
-          error: "Profile is incomplete. Please complete profile data first."
-        });
-      }
-
-      const expectedCalories = calculateCalories(
-        profile.currentWeight,
-        profile.height,
-        profile.age || 25,
-        profile.gender,
-        profile.activityLevel,
-        profile.goal
-      );
-
-      // Reuse existing active plan only if it still matches current profile target calories.
-      if (existingPlan.totalCalories === expectedCalories) {
-        return res.json(mapPlanMealsForClient(existingPlan));
-      }
-    }
-
-    const plan = await generateUserPlan(userId, startDate, endDate);
-
-    if (!plan) {
-      return res.status(400).json({ error: "Failed to generate plan. Ensure profile exists and has weight/height." });
-    }
-
-    // Fetch the newly generated plan mapped completely
-    const completePlan = await prisma.plan.findUnique({
-      where: { id: plan.id },
-      include: {
-        meals: {
-          include: { meal: true }
-        }
-      }
-    });
-
-    res.json(mapPlanMealsForClient(completePlan || plan));
+    return res.json(payload);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return sendError(res, error);
   }
 };
 
-// 📥 Get All Plans
 export const getPlans = async (req, res) => {
   try {
-    const plans = await prisma.plan.findMany({ include: { user: true } });
-    const formattedPlans = plans.map(plan => ({
+    const plans = await planRepo.findAllPlansWithUser();
+    const formattedPlans = plans.map((plan) => ({
       ...plan,
-      calories: plan.totalCalories
+      calories: plan.totalCalories,
     }));
-    res.json(formattedPlans);
+    return res.json(formattedPlans);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return sendError(res, error);
   }
 };
 
-// 📥 Get Plan By ID
 export const getPlanById = async (req, res) => {
   try {
     const { id } = req.params;
-    const plan = await prisma.plan.findUnique({
-      where: { id },
-      include: {
-        user: true,
-        meals: {
-          include: {
-            meal: true // This guarantees we get the specific meal details (name, cal, image, etc.)
-          }
-        }
-      }
-    });
-    if (!plan) return res.status(404).json({ error: "Plan not found" });
-    const response = JSON.parse(JSON.stringify(plan));
-    response.calories = plan.totalCalories;
+    const plan = await planRepo.findPlanByIdWithUserAndMeals(id);
 
-    // Minimal meal details for the list card
-    if (response.meals) {
-      response.meals = response.meals.map(m => ({
-        id: m.id,
-        mealId: m.meal?.id || m.mealId,
-        name: m.meal?.name,
-        calories: m.meal?.calories,
-        imageUrl: m.meal?.imageUrl,
-        time: m.meal?.time,
-        dayNumber: m.dayNumber,
-        multiplier: m.multiplier
-      }));
+    if (!plan) {
+      throw new HttpError(404, "Plan not found", { reason: "plan_not_found" });
     }
 
-    res.json(response);
+    return res.json(planService.mapPlanMealsForClient(plan));
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return sendError(res, error);
   }
 };
 
-// ✏️ Update Plan
 export const updatePlan = async (req, res) => {
   try {
     const { id } = req.params;
-    const plan = await prisma.plan.update({ where: { id }, data: req.body });
-    const response = JSON.parse(JSON.stringify(plan));
-        response.calories = plan.totalCalories;
-        res.json(response);
+    const plan = await planRepo.updatePlanById(id, req.body);
+    return res.json(planService.mapPlanMealsForClient(plan));
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return sendError(res, error);
   }
 };
 
-// ❌ Delete Plan
 export const deletePlan = async (req, res) => {
   try {
     const { id } = req.params;
-    await prisma.plan.delete({ where: { id } });
-    res.json({ message: "Plan deleted successfully" });
+    await planRepo.deletePlanById(id);
+    return res.json({ success: true, message: "Plan deleted successfully" });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return sendError(res, error);
   }
 };
 
-// 📥 Get Latest / Active Plan for a Specific User
 export const getUserPlan = async (req, res) => {
   try {
     const { userId } = req.params;
-    let plan = await prisma.plan.findFirst({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        meals: {
-          include: {
-            meal: true
-          }
-        }
-      }
-    });
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // If no plan exists or the latest plan is expired, generate a new one
-    if (!plan || new Date(plan.endDate) < today) {
-      const newPlan = await generateUserPlan(userId);
-      if (newPlan) {
-        // Fetch the newly generated plan completely
-        plan = await prisma.plan.findFirst({
-          where: { userId },
-          orderBy: { createdAt: "desc" },
-          include: {
-            meals: {
-              include: { meal: true }
-            }
-          }
-        });
-      }
-    }
-
-    if (!plan) {
-      return res.status(404).json({ message: "No active plan found. Please verify your profile has weight and height." });
-    }
-
-    const response = JSON.parse(JSON.stringify(plan));
-    response.calories = plan.totalCalories;
-
-    // Minimal meal details for the list card: so the rectangle stays clean
-    if (response.meals) {
-      response.meals = response.meals.map(m => ({
-        id: m.id,
-        mealId: m.meal?.id || m.mealId,
-        name: m.meal?.name,
-        calories: m.meal?.calories,
-        imageUrl: m.meal?.imageUrl,
-        time: m.meal?.time,
-        dayNumber: m.dayNumber,
-        multiplier: m.multiplier
-      }));
-    }
-
-    res.json(response);
+    const payload = await planService.getUserPlanOrGenerate(userId);
+    return res.json(payload);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return sendError(res, error);
   }
 };

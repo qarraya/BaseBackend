@@ -90,6 +90,38 @@ cron.schedule("0 16 * * *", () => {
 // 5. Dinner Reminder (7:00 PM)
 cron.schedule("0 19 * * *", () => {
     sendMealReminder("وقت العشاء! 🌙", "ختام يومك بوجبة صحية خفيفة لتساعدك على نوم هادئ.", "Dinner");
+});// 6. Check for Expired Subscriptions (Midnight: 00:00)
+cron.schedule("0 0 * * *", async () => {
+    try {
+        console.log("Running Expired Subscriptions Cron Job...");
+        const now = new Date();
+        const expiredUsers = await prisma.user.findMany({
+            where: {
+                isSubscribed: true,
+                subscriptionEndDate: { lt: now }
+            }
+        });
+
+        for (const user of expiredUsers) {
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { isSubscribed: false }
+            });
+            await createSystemNotification(
+                 user.id,
+                 "اشتراكك انتهى! ⚠️",
+                 "لقد انتهت فترة اشتراكك. يرجى التجديد للاستمرار في الاستفادة من كافة الميزات بخطط صحية وغذائية.",
+                 "WARNING"
+            );
+        }
+        if (expiredUsers.length > 0) {
+            console.log(`Processed ${expiredUsers.length} expired subscriptions.`);
+        } else {
+            console.log("No expired subscriptions today.");
+        }
+    } catch (error) {
+        console.error("Cron Job Error (Expired Subscriptions):", error);
+    }
 });
 
 export default cron;

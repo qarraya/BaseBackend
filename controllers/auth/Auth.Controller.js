@@ -68,6 +68,9 @@ export const signUp = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     /* ------------------ Create User and Profile (Transaction) ------------------ */
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 30);
+
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -75,9 +78,11 @@ export const signUp = async (req, res) => {
           email,
           password: hashedPassword,
           isVerified: true,
+          isSubscribed: true,
+          subscriptionEndDate: trialEndDate,
+          freePlansCount: 0,
         },
       });
-
       const profile = await tx.profile.create({
         data: {
           userId: user.id,

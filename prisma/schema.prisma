@@ -85,6 +85,15 @@ model User {
   resetCodeExpires DateTime? // To store the expiration time
   createdAt        DateTime  @default(now())
 
+  /// Remaining complimentary plan generations (trial / gifts). Not tied to Plan row history.
+  freePlansCount Int @default(1)
+
+  /// Whether the user currently has a paid (or granted) subscription flag set.
+  isSubscribed Boolean @default(false)
+
+  /// Inclusive subscription period end; must be > now together with isSubscribed for active access.
+  subscriptionEndDate DateTime?
+
   profile       Profile?
   plans         Plan[]
   progress      Progress[]

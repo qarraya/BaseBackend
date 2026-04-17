@@ -13,6 +13,9 @@ import dashboardRoutes from "./controllers/dashboard/Dashboard.Routes.js";
 import settingsRoutes from "./controllers/settings/Settings.Routes.js";
 import notificationsRoutes from "./controllers/notifications/Notifications.Routes.js";
 import chatRoutes from "./controllers/chat/Chat.Routes.js";
+import { verifyAnyoneHasAccount } from "./middleware/verifyToken.js";
+import { generatePlan } from "./controllers/plan/Plan.Controller.js";
+import subscriptionRoutes from "./controllers/subscription/Subscription.Routes.js";
 
 // Initialize scheduled background jobs
 import "./jobs/cronJobs.js";
@@ -77,6 +80,16 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/subscription", subscriptionRoutes);
+
+/**
+ * Plan generation (entitlement + atomic reservation in services).
+ * For read-only eligibility on other routes, use `attachPlanGenerationPreview`
+ * from `./middleware/planEntitlement.middleware.js` (does not decrement credits).
+ */
+app.post("/generate-plan", verifyAnyoneHasAccount, generatePlan);
+
+
 
 
 
