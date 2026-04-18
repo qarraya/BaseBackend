@@ -71,7 +71,9 @@ export const getDashboardToday = async (req, res) => {
             });
 
             todayMealsFormatted = planMeals.map(pm => {
-                consumedCalories += pm.meal.calories;
+                const adjustedCalories = Math.round(pm.meal.calories * pm.multiplier);
+                consumedCalories += adjustedCalories;
+
                 // Map time conceptually
                 let timeString = "";
                 if (pm.mealTime === "BREAKFAST") timeString = "08:00 صباحًا";
@@ -79,17 +81,29 @@ export const getDashboardToday = async (req, res) => {
                 else if (pm.mealTime === "DINNER") timeString = "07:00 مساءً";
                 else timeString = "04:00 عصرًا";
 
+                // Adjust portion string if it ends with 'غ' or 'g'
+                let adjustedPortion = pm.meal.portion || "";
+                if (adjustedPortion && pm.multiplier !== 1) {
+                    const match = adjustedPortion.match(/^(\d+(?:\.\d+)?)\s*([\u063a\u0641]||g|kg)$/i);
+                    if (match) {
+                        const amount = parseFloat(match[1]);
+                        const unit = match[2];
+                        const newAmount = Math.round(amount * pm.multiplier);
+                        adjustedPortion = `${newAmount}${unit}`;
+                    }
+                }
+
                 return {
                     id: pm.id,
                     category: mealTimeMapper[pm.mealTime] || "وجبة",
                     timeString,
                     name: pm.meal.name,
-                    calories: pm.meal.calories,
+                    calories: adjustedCalories,
                     imageUrl: pm.meal.imageUrl || null,
-                    portion: pm.meal.portion || "",
-                    proteins: pm.meal.proteins || 0,
-                    fats: pm.meal.fats || 0,
-                    carbs: pm.meal.carbs || 0,
+                    portion: adjustedPortion,
+                    proteins: Math.round((pm.meal.proteins || 0) * pm.multiplier * 10) / 10,
+                    fats: Math.round((pm.meal.fats || 0) * pm.multiplier * 10) / 10,
+                    carbs: Math.round((pm.meal.carbs || 0) * pm.multiplier * 10) / 10,
                     ingredients: pm.meal.ingredients || []
                 };
             });
