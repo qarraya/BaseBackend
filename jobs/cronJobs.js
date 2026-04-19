@@ -1,8 +1,6 @@
 import cron from "node-cron";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../lib/prisma.js";
 import { createSystemNotification } from "../utils/notificationService.js";
-
-const prisma = new PrismaClient();
 
 const sendMealReminder = async (title, baseMessage, mealTime) => {
     try {

@@ -1,4 +1,4 @@
-import * as progressRepo from "../repositories/progress.repository.js";
+import prisma from "../lib/prisma.js";
 
 /**
  * Signed delta: positive if weight went up, negative if down.
@@ -16,10 +16,13 @@ export async function recordWeightSnapshot(userId, newWeight, previousWeight) {
   if (Number.isNaN(nw) || Number.isNaN(pw)) {
     throw new Error("newWeight and previousWeight must be valid numbers");
   }
-  return progressRepo.insertProgress({
-    userId,
-    newWeight: nw,
-    previousWeight: pw,
+
+  return prisma.progress.create({
+    data: {
+      userId,
+      newWeight: nw,
+      previousWeight: pw,
+    },
   });
 }
 
@@ -28,7 +31,11 @@ export async function recordWeightSnapshot(userId, newWeight, previousWeight) {
  */
 export async function getUserProgressHistory(userId, options = {}) {
   const order = options.order === "asc" ? "asc" : "desc";
-  const rows = await progressRepo.findProgressByUserId(userId, order);
+
+  const rows = await prisma.progress.findMany({
+    where: { userId },
+    orderBy: { date: order },
+  });
 
   return rows.map((row) => ({
     id: row.id,

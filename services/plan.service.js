@@ -1,3 +1,4 @@
+import prisma from "../lib/prisma.js";
 import { calculateCalories, generateUserPlan } from "../utils/planGenerator.js";
 import {
   FIRST_MONTH_FREE_MESSAGE_AR,
@@ -5,9 +6,14 @@ import {
 } from "../constants/subscriptionMessages.js";
 import { PLAN_GEN_REASON } from "../constants/subscriptionReasons.js";
 import { HttpError } from "../errors/httpError.js";
-import * as planRepo from "../repositories/plan.repository.js";
 import * as subscriptionService from "./subscription.service.js";
 import { ensureReservedPlanGeneration } from "./planEntitlement.service.js";
+
+const mealsWithMealInclude = {
+  meals: {
+    include: { meal: true },
+  },
+};
 
 function buildEntitlementForPlanResponse(reserved, summary) {
   let messageAr = null;
@@ -31,6 +37,7 @@ function buildEntitlementForPlanResponse(reserved, summary) {
  * Shape API responses consistently (calories alias + lean meal list).
  */
 export function mapPlanMealsForClient(plan) {
+  if (!plan) return null;
   const response = JSON.parse(JSON.stringify(plan));
   response.calories = plan.totalCalories;
 
@@ -80,7 +87,11 @@ export async function generatePlanForUser({ userId, startDate, endDate }) {
       );
     }
 
-    const completePlan = await planRepo.findPlanWithMealsById(plan.id);
+    const completePlan = await prisma.plan.findUnique({
+      where: { id: plan.id },
+      include: mealsWithMealInclude,
+    });
+    
     const planPayload = mapPlanMealsForClient(completePlan || plan);
     const summary = await subscriptionService.getUserEntitlementSummary(userId);
 
@@ -99,10 +110,20 @@ export async function createPlanForUser({ userId, startDate, endDate }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const existingPlan = await planRepo.findActivePlanForUser(userId, today);
+  const existingPlan = await prisma.plan.findFirst({
+    where: {
+      userId,
+      endDate: { gte: today },
+    },
+    orderBy: { createdAt: "desc" },
+    include: mealsWithMealInclude,
+  });
 
   if (existingPlan) {
-    const profile = await planRepo.findProfileForCalorieCheck(userId);
+    const profile = await prisma.profile.findUnique({
+      where: { userId },
+      include: { chronicDiseases: true },
+    });
 
     if (!profile || !profile.currentWeight || !profile.height) {
       throw new HttpError(
@@ -137,7 +158,10 @@ export async function createPlanForUser({ userId, startDate, endDate }) {
       );
     }
 
-    const completePlan = await planRepo.findPlanWithMealsById(plan.id);
+    const completePlan = await prisma.plan.findUnique({
+      where: { id: plan.id },
+      include: mealsWithMealInclude,
+    });
     return mapPlanMealsForClient(completePlan || plan);
   });
 }
@@ -150,7 +174,11 @@ export async function getUserPlanOrGenerate(userId) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  let plan = await planRepo.findLatestPlanForUser(userId);
+  let plan = await prisma.plan.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    include: mealsWithMealInclude,
+  });
 
   const withPlanPageBanner = async (payload) => ({
     ...payload,
@@ -166,7 +194,11 @@ export async function getUserPlanOrGenerate(userId) {
   return runGenerationAfterReserve(userId, reserved, async () => {
     await generateUserPlan(userId, new Date(), null);
 
-    plan = await planRepo.findLatestPlanForUser(userId);
+    plan = await prisma.plan.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      include: mealsWithMealInclude,
+    });
 
     if (!plan) {
       throw new HttpError(
@@ -177,4 +209,35 @@ export async function getUserPlanOrGenerate(userId) {
 
     return withPlanPageBanner(mapPlanMealsForClient(plan));
   });
+}
+
+/* ------------------ Pure CRUD methods for Controller ------------------ */
+
+export async function findAllPlans() {
+  return prisma.plan.findMany({ 
+    include: { user: true } 
+  });
+}
+
+export async function getPlanByIdWithFullData(id) {
+  return prisma.plan.findUnique({
+    where: { id },
+    include: {
+      user: true,
+      meals: { include: { meal: true } },
+    },
+  });
+}
+
+export async function updatePlan(id, data) {
+  const plan = await prisma.plan.update({ 
+    where: { id }, 
+    data,
+    include: mealsWithMealInclude
+  });
+  return mapPlanMealsForClient(plan);
+}
+
+export async function deletePlan(id) {
+  return prisma.plan.delete({ where: { id } });
 }

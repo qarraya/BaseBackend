@@ -1,7 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../lib/prisma.js";
 import { kcalFromMacros } from "../../utils/macros.js";
-
-const prisma = new PrismaClient();
 
 /* ------------------ Get All Meals ------------------ */
 export const getAllMeals = async (req, res) => {

@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "../../lib/prisma.js";
 
 
 // 🔹 GET MY NOTIFICATIONS (Marks all as read automatically on fetch)

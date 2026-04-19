@@ -10,7 +10,7 @@ import {
 } from "./Auth.Controller.js";
 const router = express.Router();
 
-router.post('/signup', signUp);
+router.post('/signup', signUp);//بتحدد وين يروح الطلب وبدونها السيرفر ما بعرف يعالج الطلب
 router.post('/login', logIn);
 router.post('/logout', logOut);
 router.post('/forgot-password', forgotPassword);

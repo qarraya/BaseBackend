@@ -1,9 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../lib/prisma.js";
 import { generateUserPlan } from "../../utils/planGenerator.js";
 import { createSystemNotification } from "../../utils/notificationService.js";
 import * as progressService from "../../services/progress.service.js";
-
-const prisma = new PrismaClient();
 
 /* ------------------ Create / Upsert Profile ------------------ */
 export const createProfile = async (req, res) => {

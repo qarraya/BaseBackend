@@ -1,10 +1,19 @@
+import prisma from "../lib/prisma.js";
 import { PLAN_GEN_REASON } from "../constants/subscriptionReasons.js";
 import {
   FIRST_MONTH_FREE_MESSAGE_AR,
   SUBSCRIPTION_EXPIRED_MESSAGE_AR,
   FREE_TRIAL_EXHAUSTED_MESSAGE_AR,
 } from "../constants/subscriptionMessages.js";
-import * as userSubscriptionRepo from "../repositories/userSubscription.repository.js";
+
+/**
+ * Columns required for entitlement only.
+ */
+const entitlementSelect = {
+  id: true,
+  freePlansCount: true,
+  subscriptionEndDate: true,
+};
 
 /**
  * Whether the user currently has an unexpired subscription *window*.
@@ -46,7 +55,10 @@ export function evaluatePlanGenerationFromUserRow(user) {
  * Read-only gate for UI or diagnostics (does not decrement freePlansCount).
  */
 export async function canUserGeneratePlan(userId) {
-  const user = await userSubscriptionRepo.findUserEntitlementById(userId);
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: entitlementSelect,
+  });
   return evaluatePlanGenerationFromUserRow(user);
 }
 
@@ -55,7 +67,10 @@ export async function canUserGeneratePlan(userId) {
  * Values reflect current DB state (e.g. freePlansRemaining after a decrement).
  */
 export async function getUserEntitlementSummary(userId) {
-  const user = await userSubscriptionRepo.findUserEntitlementById(userId);
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: entitlementSelect,
+  });
   if (!user) return null;
 
   const hasActiveSubscription = hasActiveSubscriptionWindow(user);
@@ -74,7 +89,37 @@ export async function getUserEntitlementSummary(userId) {
  * Atomic reservation: confirms subscription window or consumes exactly one free credit.
  */
 export async function reservePlanGenerationEntitlement(userId) {
-  const res = await userSubscriptionRepo.transactionallyReservePlanGeneration(userId);
+  const res = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: entitlementSelect,
+    });
+
+    if (!user) {
+      return { ok: false, userExists: false, reason: null };
+    }
+
+    const now = new Date();
+
+    // Paid/granted window: active iff end date is strictly in the future.
+    if (user.subscriptionEndDate && user.subscriptionEndDate > now) {
+      return { ok: true, userExists: true, reason: PLAN_GEN_REASON.SUBSCRIBED };
+    }
+
+    if (user.freePlansCount > 0) {
+      await tx.user.update({
+        where: { id: userId },
+        data: { freePlansCount: { decrement: 1 } },
+      });
+      return { ok: true, userExists: true, reason: PLAN_GEN_REASON.FREE_PLAN };
+    }
+
+    return {
+      ok: false,
+      userExists: true,
+      reason: PLAN_GEN_REASON.SUBSCRIPTION_REQUIRED,
+    };
+  });
 
   if (!res.userExists) {
     return {
@@ -86,8 +131,6 @@ export async function reservePlanGenerationEntitlement(userId) {
   }
 
   if (!res.ok) {
-    // If reason is free plan, it means they exhausted free. If subscription required, it means subscription expired.
-    // However, user is not fully loaded here, so let's default to the appropriate error in entitlement middleware
     return { allowed: false, reason: res.reason };
   }
 
@@ -100,7 +143,10 @@ export async function reservePlanGenerationEntitlement(userId) {
  */
 export async function refundFreePlanCreditIfNeeded(userId, reservedReason) {
   if (reservedReason === PLAN_GEN_REASON.FREE_PLAN) {
-    await userSubscriptionRepo.incrementFreePlansCount(userId, 1);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { freePlansCount: { increment: 1 } },
+    });
   }
 }
 
@@ -113,7 +159,13 @@ export async function activateUserSubscription(userId, durationDays = 30) {
   const subscriptionEndDate = new Date();
   subscriptionEndDate.setDate(subscriptionEndDate.getDate() + days);
 
-  await userSubscriptionRepo.setActiveSubscription(userId, subscriptionEndDate, true);
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      isSubscribed: true,
+      subscriptionEndDate,
+    },
+  });
 
   return { isSubscribed: true, subscriptionEndDate };
 }
@@ -123,14 +175,23 @@ export async function activateUserSubscription(userId, durationDays = 30) {
  * Trial balance `freePlansCount` is left unchanged.
  */
 export async function cancelUserSubscription(userId) {
-  await userSubscriptionRepo.clearSubscriptionWindow(userId);
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      isSubscribed: false,
+      subscriptionEndDate: null,
+    },
+  });
   return { isSubscribed: false, subscriptionEndDate: null };
 }
 
 /** Admin/promo: add complimentary generations without touching Plan rows. */
 export async function giftFreePlanCredits(userId, count = 1) {
   const n = Math.max(1, Number(count) || 1);
-  await userSubscriptionRepo.incrementFreePlansCount(userId, n);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { freePlansCount: { increment: n } },
+  });
   return { added: n };
 }
 
@@ -138,7 +199,14 @@ export async function giftFreePlanCredits(userId, count = 1) {
  * Combined snapshot for GET /api/subscription/me (dev + app profile).
  */
 export async function getSubscriptionStatusForClient(userId) {
-  const row = await userSubscriptionRepo.findUserSubscriptionDisplay(userId);
+  const row = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      isSubscribed: true,
+      subscriptionEndDate: true,
+      freePlansCount: true,
+    },
+  });
   if (!row) return null;
 
   const now = new Date();
@@ -176,7 +244,13 @@ export async function getSubscriptionStatusForClient(userId) {
  * Same copy as `planPageMessageAr` from GET /subscription/me — for attaching to plan payloads.
  */
 export async function getPlanPageMessageArForUser(userId) {
-  const row = await userSubscriptionRepo.findUserSubscriptionDisplay(userId);
+  const row = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      subscriptionEndDate: true,
+      freePlansCount: true,
+    },
+  });
   if (!row) return null;
   if (hasActiveSubscriptionWindow(row)) return null;
   if (row.freePlansCount > 0) return FIRST_MONTH_FREE_MESSAGE_AR;

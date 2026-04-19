@@ -1,5 +1,4 @@
 import { HttpError } from "../../errors/httpError.js";
-import * as planRepo from "../../repositories/plan.repository.js";
 import * as planService from "../../services/plan.service.js";
 
 /**
@@ -68,7 +67,7 @@ export const createPlan = async (req, res) => {
 
 export const getPlans = async (req, res) => {
   try {
-    const plans = await planRepo.findAllPlansWithUser();
+    const plans = await planService.findAllPlans();
     const formattedPlans = plans.map((plan) => ({
       ...plan,
       calories: plan.totalCalories,
@@ -82,7 +81,7 @@ export const getPlans = async (req, res) => {
 export const getPlanById = async (req, res) => {
   try {
     const { id } = req.params;
-    const plan = await planRepo.findPlanByIdWithUserAndMeals(id);
+    const plan = await planService.getPlanByIdWithFullData(id);
 
     if (!plan) {
       throw new HttpError(404, "Plan not found", { reason: "plan_not_found" });
@@ -97,8 +96,8 @@ export const getPlanById = async (req, res) => {
 export const updatePlan = async (req, res) => {
   try {
     const { id } = req.params;
-    const plan = await planRepo.updatePlanById(id, req.body);
-    return res.json(planService.mapPlanMealsForClient(plan));
+    const plan = await planService.updatePlan(id, req.body);
+    return res.json(plan); // mapPlanMealsForClient is already called in the service updatePlan
   } catch (error) {
     return sendError(res, error);
   }
@@ -107,7 +106,7 @@ export const updatePlan = async (req, res) => {
 export const deletePlan = async (req, res) => {
   try {
     const { id } = req.params;
-    await planRepo.deletePlanById(id);
+    await planService.deletePlan(id);
     return res.json({ success: true, message: "Plan deleted successfully" });
   } catch (error) {
     return sendError(res, error);

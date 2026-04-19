@@ -1,8 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../lib/prisma.js";
 import bcrypt from "bcryptjs";
 import { createSystemNotification } from "../../utils/notificationService.js";
-
-const prisma = new PrismaClient();
 
 export const createNotificationForUser = async ({ userId, title, message, type = "MESSAGE" }) => {
     return prisma.notification.create({

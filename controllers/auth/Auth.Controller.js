@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../lib/prisma.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
@@ -7,10 +7,6 @@ import { createSystemNotification } from "../../utils/notificationService.js";
 import { sendPasswordResetOTP } from "../../utils/mailService.js";
 
 dotenv.config();
-
-const prisma = new PrismaClient({
-  log: ["error"],
-});
 
 export const signUp = async (req, res) => {
   try {
