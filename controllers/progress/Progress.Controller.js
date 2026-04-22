@@ -44,46 +44,66 @@ export const getProgressDashboard = async (req, res) => {
       return res.status(401).json({ success: false, message: "Authentication required" });
     }
 
-    // 1. Get history (oldest first for stats calculation)
-    const history = await progressService.getUserProgressHistory(userId, { order: "asc" });
-
-    // 2. Get profile for current weight (as fallback/source of truth)
+    // 1. Fetch user profile and progress history
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: { profile: true },
     });
 
-    const currentWeight = user?.profile?.currentWeight || (history.length > 0 ? history[history.length - 1].newWeight : 0);
-    const initialWeight = history.length > 0 ? history[0].previousWeight : currentWeight;
-    const totalChange = history.length > 0 ? (currentWeight - initialWeight) : 0;
+    if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+    }
 
-    // 3. Format history for chart
+    const history = await progressService.getUserProgressHistory(userId, { order: "asc" });
+
+    // 2. Map Goal Text
+    const goalMapper = {
+        LOSE: "إنقاص الوزن",
+        MAINTAIN: "الحفاظ على الوزن",
+        GAIN: "زيادة الوزن"
+    };
+    const goalText = user.profile?.goal ? (goalMapper[user.profile.goal] || "هدف غير محدد") : "لم يتم تحديد الهدف";
+
+    // 3. Current weight logic
+    const currentWeight = user.profile?.currentWeight || (history.length > 0 ? history[history.length - 1].newWeight : 0);
+    const initialWeight = history.length > 0 ? history[0].previousWeight : currentWeight;
+    const weightChange = Number((currentWeight - initialWeight).toFixed(1));
+
+    // 4. chartData (history)
     const chartData = history.map(h => ({
       date: h.date,
       weight: h.newWeight
     }));
 
-    // Add current point if not already there or to ensure freshness
-    if (chartData.length === 0 || chartData[chartData.length - 1].weight !== currentWeight) {
-        // Only add if we have a current weight
-        if (currentWeight > 0) {
-            // Check if last entry's date is today
-            const lastDate = chartData.length > 0 ? new Date(chartData[chartData.length - 1].date).toDateString() : null;
-            const today = new Date().toDateString();
-            
-            if (lastDate !== today) {
-                chartData.push({ date: new Date(), weight: currentWeight });
-            }
-        }
-    }
+    // 5. Comparison logic (Start of month)
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // Find the record closest to the start of the month
+    const startOfMonthRecord = await prisma.progress.findFirst({
+        where: {
+            userId,
+            date: { gte: startOfMonth }
+        },
+        orderBy: { date: 'asc' }
+    });
+
+    const startOfMonthWeight = startOfMonthRecord ? startOfMonthRecord.previousWeight : initialWeight;
+    const monthChange = Number((currentWeight - startOfMonthWeight).toFixed(1));
 
     return res.status(200).json({
       success: true,
       data: {
         currentWeight,
-        initialWeight,
-        totalChange: Number(totalChange.toFixed(1)),
-        history: chartData,
+        weightChange,
+        goalText,
+        chartData,
+        comparison: {
+          metric: "الوزن",
+          startOfMonthWeight,
+          currentWeight,
+          change: monthChange
+        }
       },
     });
   } catch (error) {
