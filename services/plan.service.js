@@ -35,6 +35,7 @@ function buildEntitlementForPlanResponse(reserved, summary) {
 
 /**
  * Shape API responses consistently (calories alias + lean meal list).
+ * Multiplier is applied here so the client sees the actual portions/calories.
  */
 export function mapPlanMealsForClient(plan) {
   if (!plan) return null;
@@ -42,16 +43,38 @@ export function mapPlanMealsForClient(plan) {
   response.calories = plan.totalCalories;
 
   if (response.meals) {
-    response.meals = response.meals.map((m) => ({
-      id: m.id,
-      mealId: m.meal?.id || m.mealId,
-      name: m.meal?.name,
-      calories: m.meal?.calories,
-      imageUrl: m.meal?.imageUrl,
-      time: m.meal?.time,
-      dayNumber: m.dayNumber,
-      multiplier: m.multiplier,
-    }));
+    response.meals = response.meals.map((m) => {
+      const meal = m.meal || {};
+      const multiplier = m.multiplier || 1.0;
+
+      // Adjust portion string if it's like "200g" or "150غ"
+      let adjustedPortion = meal.portion || "";
+      if (adjustedPortion && multiplier !== 1) {
+        const match = adjustedPortion.match(/^(\d+(?:\.\d+)?)\s*([\u063a\u0641]||g|kg)$/i);
+        if (match) {
+          const amount = parseFloat(match[1]);
+          const unit = match[2];
+          const newAmount = Math.round(amount * multiplier);
+          adjustedPortion = `${newAmount}${unit}`;
+        }
+      }
+
+      return {
+        id: m.id,
+        mealId: meal.id || m.mealId,
+        name: meal.name,
+        calories: Math.round((meal.calories || 0) * multiplier),
+        proteins: Math.round((meal.proteins || 0) * multiplier * 10) / 10,
+        fats: Math.round((meal.fats || 0) * multiplier * 10) / 10,
+        carbs: Math.round((meal.carbs || 0) * multiplier * 10) / 10,
+        imageUrl: meal.imageUrl,
+        time: meal.time,
+        dayNumber: m.dayNumber,
+        multiplier: multiplier,
+        portion: adjustedPortion,
+        ingredients: meal.ingredients || [],
+      };
+    });
   }
 
   return response;
@@ -75,9 +98,56 @@ async function runGenerationAfterReserve(userId, reserved, fn) {
  * Returns `{ plan, entitlement }` so the client can show subscription vs free trial and remaining quota.
  */
 export async function generatePlanForUser({ userId, startDate, endDate }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Idempotency: If the user already has an active plan that matches current needs, return it.
+  const existingPlan = await prisma.plan.findFirst({
+    where: {
+      userId,
+      endDate: { gte: today },
+    },
+    orderBy: { createdAt: "desc" },
+    include: mealsWithMealInclude,
+  });
+
+  if (existingPlan) {
+    const profile = await prisma.profile.findUnique({
+      where: { userId },
+    });
+
+    if (profile && profile.currentWeight && profile.height) {
+      const expectedCalories = calculateCalories(
+        profile.currentWeight,
+        profile.height,
+        profile.age || 25,
+        profile.gender,
+        profile.activityLevel,
+        profile.goal
+      );
+
+      if (existingPlan.totalCalories === expectedCalories) {
+        console.log(`[generatePlanForUser] Returning existing active plan for user ${userId}`);
+        const summary = await subscriptionService.getUserEntitlementSummary(userId);
+        return {
+          plan: mapPlanMealsForClient(existingPlan),
+          entitlement: {
+            accessGrantedVia: "EXISTING_PLAN",
+            hasActiveSubscription: summary?.hasActiveSubscription ?? false,
+            subscriptionEndDate: summary?.subscriptionEndDate ?? null,
+            freePlansRemaining: summary?.freePlansRemaining ?? 0,
+            canGenerateAgain: summary?.canGenerateAgain ?? false,
+            messageAr: "لديك خطة نشطة بالفعل.",
+          },
+        };
+      }
+    }
+  }
+
   const reserved = await ensureReservedPlanGeneration(userId);
 
   return runGenerationAfterReserve(userId, reserved, async () => {
+    console.log(`[generatePlanForUser] Generating NEW plan for user ${userId}`);
     const plan = await generateUserPlan(userId, startDate, endDate);
 
     if (!plan) {

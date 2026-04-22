@@ -7,6 +7,7 @@ import {
   verifyOTP,
   resetPassword,
   getUserData,
+  adminLogin,
 } from "./Auth.Controller.js";
 const router = express.Router();
 
@@ -17,5 +18,8 @@ router.post('/forgot-password', forgotPassword);
 router.post('/verify-otp', verifyOTP);
 router.post('/reset-password', resetPassword);
 router.get('/', getUserData);
+
+// Admin routes
+router.post('/admin/login', adminLogin);
 
 export default router;
