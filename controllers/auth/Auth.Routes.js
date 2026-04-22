@@ -7,8 +7,9 @@ import {
   verifyOTP,
   resetPassword,
   getUserData,
-  adminLogin,
 } from "./Auth.Controller.js";
+import { adminLogin } from "../admin/Admin.Controller.js";
+
 const router = express.Router();
 
 router.post('/signup', signUp);//بتحدد وين يروح الطلب وبدونها السيرفر ما بعرف يعالج الطلب
