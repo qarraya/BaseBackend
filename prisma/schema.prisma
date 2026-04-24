@@ -112,6 +112,7 @@ model Profile {
   age             Int?
   height          Float?
   currentWeight   Float?
+  targetWeight    Float?
   goal            Goal?
   activityLevel   ActivityLevelEnum?
   chronicDiseases ProfileChronicDiseases[]

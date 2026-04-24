@@ -13,6 +13,7 @@ export const createProfile = async (req, res) => {
       age,
       height,
       currentWeight,
+      targetWeight,
       goal,
       activityLevel,
       chronicDiseasesIds,
@@ -37,6 +38,7 @@ export const createProfile = async (req, res) => {
       age: Number(age),
       height: Number(height),
       currentWeight: Number(currentWeight),
+      targetWeight: targetWeight ? Number(targetWeight) : undefined,
       goal,
       activityLevel,
     };
@@ -202,6 +204,7 @@ export const updateProfile = async (req, res) => {
       age,
       height,
       currentWeight,
+      targetWeight,
       goal,
       activityLevel,
       chronicDiseasesIds,
@@ -220,6 +223,7 @@ export const updateProfile = async (req, res) => {
       age: age ? Number(age) : undefined,
       height: height ? Number(height) : undefined,
       currentWeight: currentWeight ? Number(currentWeight) : undefined,
+      targetWeight: targetWeight ? Number(targetWeight) : undefined,
       goal,
       activityLevel,
     };
@@ -326,6 +330,7 @@ export const updateMyProfile = async (req, res) => {
       age,
       height,
       currentWeight,
+      targetWeight,
       goal,
       activityLevel,
       chronicDiseasesIds,
@@ -346,6 +351,7 @@ export const updateMyProfile = async (req, res) => {
       age: age ? Number(age) : undefined,
       height: height ? Number(height) : undefined,
       currentWeight: currentWeight ? Number(currentWeight) : undefined,
+      targetWeight: targetWeight ? Number(targetWeight) : undefined,
       goal,
       activityLevel,
     };

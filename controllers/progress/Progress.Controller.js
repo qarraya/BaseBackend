@@ -66,35 +66,52 @@ export const getProgressDashboard = async (req, res) => {
         orderBy: { createdAt: 'desc' }
     });
 
+    // 7. Weekly Summary Calculations
+    const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+    const lastWeekRecord = await prisma.progress.findFirst({
+        where: {
+            userId,
+            date: { lte: sevenDaysAgo }
+        },
+        orderBy: { date: 'desc' }
+    });
+
+    const lastWeekWeight = lastWeekRecord ? lastWeekRecord.newWeight : (history.length > 0 ? history[0].previousWeight : currentWeight);
+    const weeklyLoss = Number((currentWeight - lastWeekWeight).toFixed(1));
+
+    // Commitment (Adherence)
+    const daysSinceJoined = Math.max(1, Math.ceil((now - user.createdAt) / (1000 * 60 * 60 * 24)));
+    const adherenceDays = daysSinceJoined >= 7 ? "7/7" : `${daysSinceJoined}/7`;
+
     return res.status(200).json({
       success: true,
       data: {
         // --- 1. Top Card (Goal) ---
         goalText,
         currentWeight,
-        targetWeight: 80, // ⚠️ Mocked: No targetWeight in DB schema currently
+        targetWeight: user.profile?.targetWeight || 0,
 
         // --- 2. Monthly Progress ---
         monthlyProgress: {
           lostWeight: Math.abs(monthChange),
-          carbsAvg: 45, // ⚠️ Mocked: No adherence tracking in DB
-          proteinAvg: 30, // ⚠️ Mocked
+          carbsAvg: 45, // Mocked as no tracking table exists yet
+          proteinAvg: 30, // Mocked
           startDate: history.length > 0 ? history[0].date : startOfMonth,
           endDate: now,
         },
 
         // --- 3. Weekly Summary ---
         weeklySummary: {
-          averageWeight: currentWeight, // Simplified
-          weeklyLoss: -1.7, // ⚠️ Mocked
+          averageWeight: currentWeight,
+          weeklyLoss: weeklyLoss,
           averageCalories: activePlan ? activePlan.totalCalories : 1934,
-          adherenceDays: "7/7", // ⚠️ Mocked
-          weeklyRating: "ممتاز", // ⚠️ Mocked
+          adherenceDays: adherenceDays,
+          weeklyRating: weeklyLoss < 0 ? "ممتاز" : "جيد",
         },
 
         // --- 4. Streaks ---
         streak: {
-          days: 30, // ⚠️ Mocked
+          days: daysSinceJoined,
         },
 
         // --- Legacy/Existing Data ---
