@@ -60,13 +60,46 @@ export const getProgressDashboard = async (req, res) => {
     const startOfMonthWeight = startOfMonthRecord ? startOfMonthRecord.previousWeight : initialWeight;
     const monthChange = Number((currentWeight - startOfMonthWeight).toFixed(1));
 
+    // 6. Fetch Active Plan (for average calories)
+    const activePlan = await prisma.plan.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'desc' }
+    });
+
     return res.status(200).json({
       success: true,
       data: {
-        currentWeight,
-        weightChange,
+        // --- 1. Top Card (Goal) ---
         goalText,
+        currentWeight,
+        targetWeight: 80, // ⚠️ Mocked: No targetWeight in DB schema currently
+
+        // --- 2. Monthly Progress ---
+        monthlyProgress: {
+          lostWeight: Math.abs(monthChange),
+          carbsAvg: 45, // ⚠️ Mocked: No adherence tracking in DB
+          proteinAvg: 30, // ⚠️ Mocked
+          startDate: history.length > 0 ? history[0].date : startOfMonth,
+          endDate: now,
+        },
+
+        // --- 3. Weekly Summary ---
+        weeklySummary: {
+          averageWeight: currentWeight, // Simplified
+          weeklyLoss: -1.7, // ⚠️ Mocked
+          averageCalories: activePlan ? activePlan.totalCalories : 1934,
+          adherenceDays: "7/7", // ⚠️ Mocked
+          weeklyRating: "ممتاز", // ⚠️ Mocked
+        },
+
+        // --- 4. Streaks ---
+        streak: {
+          days: 30, // ⚠️ Mocked
+        },
+
+        // --- Legacy/Existing Data ---
         chartData,
+        weightChange,
         comparison: {
           metric: "الوزن",
           startOfMonthWeight,
