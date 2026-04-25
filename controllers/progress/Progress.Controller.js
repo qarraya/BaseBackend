@@ -38,21 +38,15 @@ export const getProgressDashboard = async (req, res) => {
     const initialWeight = history.length > 0 ? history[0].previousWeight : currentWeight;
     const weightChange = Number((currentWeight - initialWeight).toFixed(1));
 
-    // Calculate dynamic target weight based on height (Ideal BMI ~22) or provide a smart calculated goal
-    let calculatedTargetWeight = 0;
-    if (user.profile?.height) {
-        const heightInMeters = user.profile.height / 100;
-        const idealBmi = 22;
-        calculatedTargetWeight = Number((idealBmi * (heightInMeters * heightInMeters)).toFixed(1));
+    // Calculate dynamic target weight based on staged 10% milestone
+    let calculatedTargetWeight = currentWeight;
+
+    if (user.profile?.goal === 'LOSE') {
+        calculatedTargetWeight = Number((initialWeight * 0.90).toFixed(1)); // Target 10% loss
+    } else if (user.profile?.goal === 'GAIN') {
+        calculatedTargetWeight = Number((initialWeight * 1.10).toFixed(1)); // Target 10% gain
     } else {
-        // If height is not available, set a dynamic target based on current weight and goal
-        if (user.profile?.goal === 'LOSE') {
-            calculatedTargetWeight = Number((initialWeight * 0.90).toFixed(1)); // Target 10% loss as a milestone
-        } else if (user.profile?.goal === 'GAIN') {
-            calculatedTargetWeight = Number((initialWeight * 1.10).toFixed(1)); // Target 10% gain as a milestone
-        } else {
-            calculatedTargetWeight = currentWeight;
-        }
+        calculatedTargetWeight = currentWeight; // MAINTAIN
     }
 
     // 4. chartData (history)
