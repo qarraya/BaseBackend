@@ -71,11 +71,43 @@ export const getProgressDashboard = async (req, res) => {
     const startOfMonthWeight = startOfMonthRecord ? startOfMonthRecord.previousWeight : initialWeight;
     const monthChange = Number((currentWeight - startOfMonthWeight).toFixed(1));
 
-    // 6. Fetch Active Plan (for average calories)
+    // 6. Fetch Active Plan (for average calories and macros)
     const activePlan = await prisma.plan.findFirst({
-      where: { userId },
-      orderBy: { createdAt: 'desc' }
+        where: { userId },
+        include: {
+            meals: {
+                include: { meal: true }
+            }
+        },
+        orderBy: { createdAt: 'desc' }
     });
+
+    let carbsAvg = 45; // Default fallback
+    let proteinAvg = 30; // Default fallback
+    let planTotalCalories = activePlan ? activePlan.totalCalories : 1934;
+
+    if (activePlan && activePlan.meals.length > 0) {
+        let totalCarbsGrams = 0;
+        let totalProteinGrams = 0;
+        let totalPlanCals = 0;
+
+        activePlan.meals.forEach(pm => {
+            const mult = pm.multiplier || 1.0;
+            totalCarbsGrams += (pm.meal.carbs || 0) * mult;
+            totalProteinGrams += (pm.meal.proteins || 0) * mult;
+            totalPlanCals += (pm.meal.calories || 0) * mult;
+        });
+
+        if (totalPlanCals > 0) {
+            // Calculate % of calories from each macro (Grams * 4 / Total Calories)
+            carbsAvg = Math.round((totalCarbsGrams * 4 / totalPlanCals) * 100);
+            proteinAvg = Math.round((totalProteinGrams * 4 / totalPlanCals) * 100);
+            planTotalCalories = Math.round(totalPlanCals / Math.max(1, activePlan.meals.length / 3)); // Approximate daily avg if multi-day
+            
+            // Overwrite with the stored totalCalories if it exists for consistency
+            if (activePlan.totalCalories) planTotalCalories = activePlan.totalCalories;
+        }
+    }
 
     // 7. Weekly Summary Calculations
     const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
@@ -110,8 +142,8 @@ export const getProgressDashboard = async (req, res) => {
         // --- 2. Monthly Progress ---
         monthlyProgress: {
           lostWeight: Math.abs(monthChange),
-          carbsAvg: 45, // Mocked as no tracking table exists yet
-          proteinAvg: 30, // Mocked
+          carbsAvg: carbsAvg,
+          proteinAvg: proteinAvg,
           startDate: history.length > 0 ? history[0].date : startOfMonth,
           endDate: now,
         },
@@ -120,7 +152,7 @@ export const getProgressDashboard = async (req, res) => {
         weeklySummary: {
           averageWeight: currentWeight,
           weeklyLoss: weeklyLoss,
-          averageCalories: activePlan ? activePlan.totalCalories : 1934,
+          averageCalories: planTotalCalories,
           adherenceDays: adherenceDays,
           weeklyRating: weeklyLoss < 0 ? "ممتاز" : "جيد",
         },
