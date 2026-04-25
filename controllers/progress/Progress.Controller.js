@@ -91,8 +91,13 @@ export const getProgressDashboard = async (req, res) => {
     const weeklyLoss = Number((currentWeight - lastWeekWeight).toFixed(1));
 
     // Commitment (Adherence)
-    const daysSinceJoined = Math.max(1, Math.ceil((now - user.createdAt) / (1000 * 60 * 60 * 24)));
-    const adherenceDays = daysSinceJoined >= 7 ? "7/7" : `${daysSinceJoined}/7`;
+    const startDate = history.length > 0 ? history[0].date : user.createdAt;
+    const daysSinceJoined = Math.max(1, Math.ceil((now - startDate) / (1000 * 60 * 60 * 24)));
+    
+    // Calculate adherence based on current day of the week (assuming week starts on Monday=1, Sunday=7)
+    // getDay() returns 0 for Sunday, 1 for Monday, etc.
+    const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); 
+    const adherenceDays = `${dayOfWeek}/7`;
 
     return res.status(200).json({
       success: true,
