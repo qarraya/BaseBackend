@@ -20,7 +20,7 @@ export const getProgressDashboard = async (req, res) => {
     });
 
     if (!user) {
-        return res.status(404).json({ success: false, message: "User not found" });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
     const history = await progressService.getUserProgressHistory(userId, { order: "asc" });
@@ -38,6 +38,23 @@ export const getProgressDashboard = async (req, res) => {
     const initialWeight = history.length > 0 ? history[0].previousWeight : currentWeight;
     const weightChange = Number((currentWeight - initialWeight).toFixed(1));
 
+    // Calculate dynamic target weight based on height (Ideal BMI ~22) or provide a smart calculated goal
+    let calculatedTargetWeight = 0;
+    if (user.profile?.height) {
+        const heightInMeters = user.profile.height / 100;
+        const idealBmi = 22;
+        calculatedTargetWeight = Number((idealBmi * (heightInMeters * heightInMeters)).toFixed(1));
+    } else {
+        // If height is not available, set a dynamic target based on current weight and goal
+        if (user.profile?.goal === 'LOSE') {
+            calculatedTargetWeight = Number((initialWeight * 0.90).toFixed(1)); // Target 10% loss as a milestone
+        } else if (user.profile?.goal === 'GAIN') {
+            calculatedTargetWeight = Number((initialWeight * 1.10).toFixed(1)); // Target 10% gain as a milestone
+        } else {
+            calculatedTargetWeight = currentWeight;
+        }
+    }
+
     // 4. chartData (history)
     const chartData = history.map(h => ({
       date: h.date,
@@ -47,14 +64,14 @@ export const getProgressDashboard = async (req, res) => {
     // 5. Comparison logic (Start of month)
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    
+
     // Find the record closest to the start of the month
     const startOfMonthRecord = await prisma.progress.findFirst({
-        where: {
-            userId,
-            date: { gte: startOfMonth }
-        },
-        orderBy: { date: 'asc' }
+      where: {
+        userId,
+        date: { gte: startOfMonth }
+      },
+      orderBy: { date: 'asc' }
     });
 
     const startOfMonthWeight = startOfMonthRecord ? startOfMonthRecord.previousWeight : initialWeight;
@@ -62,18 +79,18 @@ export const getProgressDashboard = async (req, res) => {
 
     // 6. Fetch Active Plan (for average calories)
     const activePlan = await prisma.plan.findFirst({
-        where: { userId },
-        orderBy: { createdAt: 'desc' }
+      where: { userId },
+      orderBy: { createdAt: 'desc' }
     });
 
     // 7. Weekly Summary Calculations
     const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
     const lastWeekRecord = await prisma.progress.findFirst({
-        where: {
-            userId,
-            date: { lte: sevenDaysAgo }
-        },
-        orderBy: { date: 'desc' }
+      where: {
+        userId,
+        date: { lte: sevenDaysAgo }
+      },
+      orderBy: { date: 'desc' }
     });
 
     const lastWeekWeight = lastWeekRecord ? lastWeekRecord.newWeight : (history.length > 0 ? history[0].previousWeight : currentWeight);
@@ -89,7 +106,7 @@ export const getProgressDashboard = async (req, res) => {
         // --- 1. Top Card (Goal) ---
         goalText,
         currentWeight,
-        targetWeight: user.profile?.targetWeight || 0,
+        targetWeight: calculatedTargetWeight || 0,
 
         // --- 2. Monthly Progress ---
         monthlyProgress: {
