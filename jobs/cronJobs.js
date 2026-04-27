@@ -107,8 +107,8 @@ cron.schedule("0 0 * * *", async () => {
             });
             await createSystemNotification(
                  user.id,
-                 "اشتراكك انتهى! ⚠️",
-                 "لقد انتهت فترة اشتراكك. يرجى التجديد للاستمرار في الاستفادة من كافة الميزات بخطط صحية وغذائية.",
+                 "انتهت الرحلة؟ لا تدعها تتوقف! ⚠️",
+                 "لقد انتهت فترة اشتراكك اليوم. نأمل أنك استمتعت بتجربتك! جدد اشتراكك الآن لتكمل مسيرتك نحو أهدافك الصحية.",
                  "WARNING"
             );
         }
@@ -119,6 +119,43 @@ cron.schedule("0 0 * * *", async () => {
         }
     } catch (error) {
         console.error("Cron Job Error (Expired Subscriptions):", error);
+    }
+});
+
+// 7. Check for Subscriptions Expiring in 3 Days (9:00 AM)
+cron.schedule("0 9 * * *", async () => {
+    try {
+        console.log("Running 3-Day Expiry Warning Cron Job...");
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + 3);
+        
+        const startOfTarget = new Date(targetDate.setHours(0,0,0,0));
+        const endOfTarget = new Date(targetDate.setHours(23,59,59,999));
+
+        const usersNearExpiry = await prisma.user.findMany({
+            where: {
+                isSubscribed: true,
+                subscriptionEndDate: {
+                    gte: startOfTarget,
+                    lte: endOfTarget
+                }
+            }
+        });
+
+        for (const user of usersNearExpiry) {
+            await createSystemNotification(
+                 user.id,
+                 "تنبيه: بقي 3 أيام فقط! ⏳",
+                 "أوشك اشتراكك على الانتهاء. لا تفقد زخمك! جدد اشتراكك الآن لضمان استمرار وصولك لخططك الغذائية المخصصة.",
+                 "WARNING"
+            );
+        }
+        
+        if (usersNearExpiry.length > 0) {
+            console.log(`Sent expiry warnings to ${usersNearExpiry.length} users.`);
+        }
+    } catch (error) {
+        console.error("Cron Job Error (3-Day Expiry Warning):", error);
     }
 });
 
