@@ -7,13 +7,17 @@ import {
   deleteMeal,
 } from "./Meal.Controller.js"; // هنا الملف اسمو صح
 
+import { verifyAdmin } from "../../middleware/verifyAdmin.js";
+
 const router = express.Router();
 
 // كل الroutes الخاصة بالوجبات
-router.get("/", getAllMeals);          // جلب كل الوجبات
-router.get("/:id", getMealById);       // جلب وجبة محددة
-router.post("/", createMeal);          // إنشاء وجبة جديدة
-router.put("/:id", updateMeal);        // تعديل وجبة موجودة
-router.delete("/:id", deleteMeal);     // حذف وجبة
+router.get("/", getAllMeals);          // جلب كل الوجبات (متاح للجميع)
+router.get("/:id", getMealById);       // جلب وجبة محددة (متاح للجميع)
+
+// العمليات التالية مسموحة للأدمن فقط
+router.post("/", verifyAdmin, createMeal);          // إنشاء وجبة جديدة
+router.put("/:id", verifyAdmin, updateMeal);        // تعديل وجبة موجودة
+router.delete("/:id", verifyAdmin, deleteMeal);     // حذف وجبة
 
 export default router;
