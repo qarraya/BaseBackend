@@ -4,8 +4,8 @@ import prisma from "../../lib/prisma.js";
 
 const adminPublic = (a) => ({
   id: a.id,
+  username: a.username,
   name: a.name,
-  email: a.email,
   lastLogin: a.lastLogin,
   createdAt: a.createdAt,
 });
@@ -14,7 +14,7 @@ const signAdminToken = (admin) =>
   jwt.sign(
     {
       id: admin.id,
-      email: admin.email,
+      username: admin.username,
       name: admin.name,
       role: "admin",
     },
@@ -24,35 +24,28 @@ const signAdminToken = (admin) =>
 
 export const adminLogin = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required." });
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password are required." });
     }
 
     const admin = await prisma.admin.findUnique({
-      where: { email: email.trim().toLowerCase() },
+      where: { username: username.trim() },
     });
 
     if (!admin) {
-      return res.status(401).json({ message: "Invalid email or password." });
+      return res.status(401).json({ message: "Invalid username or password." });
     }
 
     const ok = await bcrypt.compare(password, admin.password);
     if (!ok) {
-      return res.status(401).json({ message: "Invalid email or password." });
+      return res.status(401).json({ message: "Invalid username or password." });
     }
 
     const updated = await prisma.admin.update({
       where: { id: admin.id },
       data: { lastLogin: new Date() },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        lastLogin: true,
-        createdAt: true,
-      },
     });
 
     const token = signAdminToken(admin);
@@ -70,10 +63,10 @@ export const adminLogin = async (req, res) => {
 
 export const adminRegister = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, username, password } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email, and password are required." });
+    if (!name || !username || !password) {
+      return res.status(400).json({ message: "Name, username, and password are required." });
     }
 
     const hashed = await bcrypt.hash(password, 10);
@@ -81,7 +74,7 @@ export const adminRegister = async (req, res) => {
     const admin = await prisma.admin.create({
       data: {
         name: name.trim(),
-        email: email.trim().toLowerCase(),
+        username: username.trim(),
         password: hashed,
         lastLogin: new Date(),
       },
@@ -96,7 +89,7 @@ export const adminRegister = async (req, res) => {
     });
   } catch (error) {
     if (error.code === "P2002") {
-      return res.status(400).json({ message: "An admin with this email already exists." });
+      return res.status(400).json({ message: "An admin with this username already exists." });
     }
     console.error("adminRegister:", error);
     return res.status(500).json({ message: "Internal server error." });
@@ -109,8 +102,8 @@ export const listAdmins = async (req, res) => {
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
+        username: true,
         name: true,
-        email: true,
         lastLogin: true,
         createdAt: true,
       },
@@ -126,10 +119,11 @@ export const listAdmins = async (req, res) => {
 export const updateAdmin = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, password } = req.body;
+    const { name, username, email, password } = req.body;
 
     const data = {};
     if (name !== undefined) data.name = String(name).trim();
+    if (username !== undefined) data.username = String(username).trim();
     if (email !== undefined) data.email = String(email).trim().toLowerCase();
     if (password !== undefined && password.length > 0) {
       data.password = await bcrypt.hash(password, 10);
@@ -144,8 +138,8 @@ export const updateAdmin = async (req, res) => {
       data,
       select: {
         id: true,
+        username: true,
         name: true,
-        email: true,
         lastLogin: true,
         createdAt: true,
       },
@@ -157,7 +151,7 @@ export const updateAdmin = async (req, res) => {
       return res.status(404).json({ message: "Admin not found." });
     }
     if (error.code === "P2002") {
-      return res.status(400).json({ message: "Email already in use." });
+      return res.status(400).json({ message: "Username or email already in use." });
     }
     console.error("updateAdmin:", error);
     return res.status(500).json({ message: "Internal server error." });
