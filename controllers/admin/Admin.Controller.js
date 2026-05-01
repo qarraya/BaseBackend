@@ -11,13 +11,20 @@ const adminPublic = (a) => ({
   id: a.id,
   username: a.username,
   name: a.name,
+  isActive: a.isActive,
   lastLogin: a.lastLogin,
   createdAt: a.createdAt,
 });
 
 const signAdminToken = (admin) => {
   return jwt.sign(
-    { id: admin.id, username: admin.username, name: admin.name, role: "admin" },
+    { 
+      id: admin.id, 
+      username: admin.username, 
+      name: admin.name, 
+      role: "admin",
+      tokenVersion: admin.tokenVersion // For "Logout from all devices"
+    },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
@@ -29,6 +36,9 @@ export const adminLogin = async (req, res) => {
     const admin = await prisma.admin.findUnique({ where: { username: username.trim() } });
     if (!admin || !(await bcrypt.compare(password, admin.password))) {
       return res.status(401).json({ message: "Invalid username or password." });
+    }
+    if (!admin.isActive) {
+        return res.status(403).json({ message: "Account is inactive. Please contact support." });
     }
     await prisma.admin.update({ where: { id: admin.id }, data: { lastLogin: new Date() } });
     return res.status(200).json({ message: "Login successful.", token: signAdminToken(admin), admin: adminPublic(admin) });
@@ -48,15 +58,43 @@ export const adminRegister = async (req, res) => {
 export const updateAdminProfile = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, username, email, password } = req.body;
+    const { name, username, password } = req.body;
     const data = {};
     if (name) data.name = name.trim();
     if (username) data.username = username.trim();
-    if (email) data.email = email.trim().toLowerCase();
     if (password) data.password = await bcrypt.hash(password, 10);
     const admin = await prisma.admin.update({ where: { id }, data });
-    return res.status(200).json({ message: "Profile & Security updated successfully.", admin: adminPublic(admin) });
+    return res.status(200).json({ message: "Profile updated.", admin: adminPublic(admin) });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
+};
+
+/**
+ * --- ADVANCED SECURITY ---
+ */
+
+// Logout from all devices by incrementing tokenVersion
+export const logoutAllSessions = async (req, res) => {
+  try {
+    const { id } = req.user; // From verifyAdmin
+    await prisma.admin.update({
+      where: { id },
+      data: { tokenVersion: { increment: 1 } }
+    });
+    res.status(200).json({ success: true, message: "Logged out from all devices successfully." });
+  } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
+};
+
+// Temporary deactivate account
+export const toggleAdminActiveStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const admin = await prisma.admin.findUnique({ where: { id } });
+        const updated = await prisma.admin.update({
+            where: { id },
+            data: { isActive: !admin.isActive, tokenVersion: { increment: 1 } } // Also log out
+        });
+        res.status(200).json({ success: true, message: `Admin ${updated.isActive ? 'activated' : 'deactivated'}.`, isActive: updated.isActive });
+    } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
 };
 
 /**
@@ -150,7 +188,7 @@ export const broadcastNotification = async (req, res) => {
  */
 export const listAdmins = async (req, res) => {
   try {
-    const admins = await prisma.admin.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, username: true, name: true, lastLogin: true, createdAt: true } });
+    const admins = await prisma.admin.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, username: true, name: true, isActive: true, lastLogin: true, createdAt: true } });
     res.status(200).json({ admins });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 };

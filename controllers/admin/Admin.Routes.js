@@ -3,6 +3,8 @@ import {
   adminLogin,
   adminRegister,
   updateAdminProfile,
+  logoutAllSessions,
+  toggleAdminActiveStatus,
   getAdminStats,
   listAllQuestions,
   answerQuestion,
@@ -22,7 +24,11 @@ const router = express.Router();
 // Auth & Comprehensive Account Settings
 router.post("/login", adminLogin);
 router.post("/register", adminRegister);
-router.put("/profile/:id", verifyAdmin, updateAdminProfile); // Unified Account & Security
+router.put("/profile/:id", verifyAdmin, updateAdminProfile);
+
+// Advanced Security Actions
+router.post("/logout-all", verifyAdmin, logoutAllSessions);
+router.patch("/toggle-status/:id", verifyAdmin, toggleAdminActiveStatus);
 
 // Nutritional Rules (The "Brain")
 router.get("/nutritional-rules", verifyAdmin, getNutritionalRules);

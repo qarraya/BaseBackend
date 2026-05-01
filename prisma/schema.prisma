@@ -63,13 +63,14 @@ enum QuestionStatus {
 ////////////////////////////
 
 model Admin {
-  id        String    @id @default(uuid())
-  username  String    @unique
-  name      String
-  email     String?   @unique
-  password  String
-  lastLogin DateTime?
-  createdAt DateTime  @default(now())
+  id           String    @id @default(uuid())
+  username     String    @unique
+  name         String
+  password     String
+  isActive     Boolean   @default(true)
+  tokenVersion Int       @default(0)
+  lastLogin    DateTime?
+  createdAt    DateTime  @default(now())
 }
 
 ////////////////////////////
