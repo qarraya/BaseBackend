@@ -27,7 +27,7 @@ router.post("/register", adminRegister);
 router.put("/profile/:id", verifyAdmin, updateAdminProfile);
 
 // Advanced Security Actions
-router.post("/logout-all", verifyAdmin, logoutAllSessions);
+router.post("/logout-all/:id?", verifyAdmin, logoutAllSessions);
 router.patch("/toggle-status/:id", verifyAdmin, toggleAdminActiveStatus);
 
 // Nutritional Rules (The "Brain")

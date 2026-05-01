@@ -72,15 +72,17 @@ export const updateAdminProfile = async (req, res) => {
  * --- ADVANCED SECURITY ---
  */
 
-// Logout from all devices by incrementing tokenVersion
+// Logout from all devices (Self or Another Admin)
 export const logoutAllSessions = async (req, res) => {
   try {
-    const { id } = req.user; // From verifyAdmin
+    const { id } = req.params; // If ID is provided in URL
+    const targetId = id || req.user.id; // Default to self
+
     await prisma.admin.update({
-      where: { id },
+      where: { id: targetId },
       data: { tokenVersion: { increment: 1 } }
     });
-    res.status(200).json({ success: true, message: "Logged out from all devices successfully." });
+    res.status(200).json({ success: true, message: `Logged out ${id ? 'admin' : 'all sessions'} successfully.` });
   } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
 };
 
