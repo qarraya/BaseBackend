@@ -17,7 +17,6 @@ import { generatePlan } from "./controllers/plan/Plan.Controller.js";
 import subscriptionRoutes from "./controllers/subscription/Subscription.Routes.js";
 import progressRoutes from "./controllers/progress/Progress.Routes.js";
 import adminRoutes from "./controllers/admin/Admin.Routes.js";
-import cronRoutes from "./controllers/cron/Cron.Routes.js";
 
 // Initialize scheduled background jobs
 import "./jobs/cronJobs.js";
@@ -85,7 +84,6 @@ app.use("/api/notifications", notificationsRoutes);
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/progress", progressRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/cron", cronRoutes);
 
 /**
  * Plan generation (entitlement + atomic reservation in services).
