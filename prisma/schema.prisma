@@ -258,5 +258,6 @@ model Question {
   question  String
   answer    String?
   status    QuestionStatus @default(PENDING)
+  isRead    Boolean        @default(false)
   createdAt DateTime       @default(now())
 }

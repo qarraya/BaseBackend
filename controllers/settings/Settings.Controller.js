@@ -35,6 +35,17 @@ export const getMyNotifications = async (req, res) => {
 export const getMyQuestions = async (req, res) => {
     try {
         const userId = req.user.id;
+
+        // Mark all answered questions as read when user fetches them
+        await prisma.question.updateMany({
+            where: {
+                userId,
+                status: "ANSWERED",
+                isRead: false
+            },
+            data: { isRead: true }
+        });
+
         const questions = await prisma.question.findMany({
             where: { userId },
             orderBy: { createdAt: 'desc' }

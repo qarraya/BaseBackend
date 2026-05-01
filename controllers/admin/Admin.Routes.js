@@ -9,6 +9,7 @@ import {
 import {
   getAdminStats,
   listPendingQuestions,
+  listAllQuestions,
   answerQuestion,
   broadcastNotification
 } from "./Admin.Dashboard.Controller.js";
@@ -21,6 +22,7 @@ router.post("/register", adminRegister);
 
 // Dashboard & Management
 router.get("/stats", verifyAdmin, getAdminStats);
+router.get("/questions/all", verifyAdmin, listAllQuestions);
 router.get("/questions/pending", verifyAdmin, listPendingQuestions);
 router.post("/questions/:questionId/answer", verifyAdmin, answerQuestion);
 router.post("/broadcast", verifyAdmin, broadcastNotification);

@@ -139,3 +139,23 @@ export const broadcastNotification = async (req, res) => {
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
+
+/**
+ * 5. LIST ALL QUESTIONS (FOR TRACKING)
+ */
+export const listAllQuestions = async (req, res) => {
+    try {
+        const questions = await prisma.question.findMany({
+            include: {
+                user: {
+                    select: { username: true, email: true }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        res.status(200).json({ success: true, questions });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+};
