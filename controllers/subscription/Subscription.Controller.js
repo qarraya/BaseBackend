@@ -64,7 +64,7 @@ export const getMySubscriptionStatus = async (req, res) => {
 
 /** 
  * Mock Checkout: Simulates a successful payment and activates the subscription.
- * Use this from the Frontend to test the UI flow before integrating Stripe.
+ * Validates frontend data to simulate a real payment flow for project evaluation.
  */
 export const mockCheckout = async (req, res) => {
   try {
@@ -76,12 +76,28 @@ export const mockCheckout = async (req, res) => {
       });
     }
 
+    const { fullName, cardNumber, expiryDate, cvv } = req.body;
+
+    // Validation (Simulation for graduation project)
+    if (!fullName || fullName.trim().length < 3) {
+      return res.status(400).json({ success: false, message: "الاسم الكامل غير صالح أو قصير جداً" });
+    }
+    
+    const cleanedCardNumber = cardNumber ? cardNumber.replace(/\s+/g, '') : '';
+    if (!cleanedCardNumber || cleanedCardNumber.length < 16) {
+      return res.status(400).json({ success: false, message: "رقم البطاقة غير صالح، يجب أن يتكون من 16 رقماً على الأقل" });
+    }
+
+    if (!cvv || cvv.length < 3) {
+      return res.status(400).json({ success: false, message: "رمز CVV غير صالح" });
+    }
+
     // Call the service to activate the subscription for 30 days
     const result = await subscriptionService.activateUserSubscription(userId, 30);
 
     return res.status(200).json({
       success: true,
-      message: "Payment successful! Subscription activated for 30 days.",
+      message: `شكراً ${fullName}! تم تفعيل اشتراكك بنجاح.`,
       isSubscribed: result.isSubscribed,
       subscriptionEndDate: result.subscriptionEndDate
     });
@@ -90,7 +106,7 @@ export const mockCheckout = async (req, res) => {
     console.error("mockCheckout Error:", error);
     return res.status(500).json({
       success: false,
-      message: error.message || "Payment failed to process",
+      message: error.message || "حدث خطأ أثناء معالجة الدفع",
     });
   }
 };
