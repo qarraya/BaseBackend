@@ -74,9 +74,9 @@ export const signUp = async (req, res) => {
           email,
           password: hashedPassword,
           isVerified: true,
-          isSubscribed: true,
-          subscriptionEndDate: trialEndDate,
-          freePlansCount: 0,
+          isSubscribed: false,
+          subscriptionEndDate: null,
+          freePlansCount: 1, // Give 1 free plan generation instead of full subscription
         },
       });
       const profile = await tx.profile.create({
