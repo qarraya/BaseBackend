@@ -39,75 +39,7 @@ export const getAdminStats = async (req, res) => {
     }
 };
 
-/**
- * 2. LIST ALL PENDING QUESTIONS
- */
-export const listPendingQuestions = async (req, res) => {
-    try {
-        const questions = await prisma.question.findMany({
-            where: { status: "PENDING" },
-            include: {
-                user: {
-                    select: { username: true, email: true }
-                }
-            },
-            orderBy: { createdAt: 'asc' }
-        });
 
-        res.status(200).json({ success: true, questions });
-    } catch (error) {
-        res.status(500).json({ success: false, message: "Server error" });
-    }
-};
-
-/**
- * 3. ANSWER A QUESTION
- * Updates the question and notifies the user.
- */
-export const answerQuestion = async (req, res) => {
-    try {
-        const { questionId } = req.params;
-        const { answer } = req.body;
-
-        if (!answer) {
-            return res.status(400).json({ success: false, message: "Answer content is required" });
-        }
-
-        const question = await prisma.question.findUnique({
-            where: { id: questionId }
-        });
-
-        if (!question) {
-            return res.status(404).json({ success: false, message: "Question not found" });
-        }
-
-        // Update the question
-        const updatedQuestion = await prisma.question.update({
-            where: { id: questionId },
-            data: {
-                answer,
-                status: "ANSWERED"
-            }
-        });
-
-        // Send notification to the user
-        await createSystemNotification(
-            question.userId,
-            "تم الرد على استفسارك! ✅",
-            `لقد قام الأدمن بالإجابة على سؤالك: "${question.question.substring(0, 20)}..."`,
-            "MESSAGE"
-        );
-
-        res.status(200).json({
-            success: true,
-            message: "Answer sent successfully and user notified",
-            question: updatedQuestion
-        });
-    } catch (error) {
-        console.error("Answer Question Error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
-    }
-};
 
 /**
  * 4. BROADCAST NOTIFICATION
@@ -136,26 +68,6 @@ export const broadcastNotification = async (req, res) => {
         });
     } catch (error) {
         console.error("Broadcast Error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
-    }
-};
-
-/**
- * 5. LIST ALL QUESTIONS (FOR TRACKING)
- */
-export const listAllQuestions = async (req, res) => {
-    try {
-        const questions = await prisma.question.findMany({
-            include: {
-                user: {
-                    select: { username: true, email: true }
-                }
-            },
-            orderBy: { createdAt: 'desc' }
-        });
-
-        res.status(200).json({ success: true, questions });
-    } catch (error) {
         res.status(500).json({ success: false, message: "Server error" });
     }
 };

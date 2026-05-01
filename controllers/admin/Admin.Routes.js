@@ -8,11 +8,14 @@ import {
 } from "./Admin.Controller.js";
 import {
   getAdminStats,
+  broadcastNotification
+} from "./Admin.Dashboard.Controller.js";
+import {
   listPendingQuestions,
   listAllQuestions,
   answerQuestion,
-  broadcastNotification
-} from "./Admin.Dashboard.Controller.js";
+  deleteQuestion
+} from "./Admin.Questions.Controller.js";
 import { verifyAdmin } from "../../middleware/verifyAdmin.js";
 
 const router = express.Router();
@@ -25,6 +28,7 @@ router.get("/stats", verifyAdmin, getAdminStats);
 router.get("/questions/all", verifyAdmin, listAllQuestions);
 router.get("/questions/pending", verifyAdmin, listPendingQuestions);
 router.post("/questions/:questionId/answer", verifyAdmin, answerQuestion);
+router.delete("/questions/:questionId", verifyAdmin, deleteQuestion);
 router.post("/broadcast", verifyAdmin, broadcastNotification);
 
 router.get("/", verifyAdmin, listAdmins);
