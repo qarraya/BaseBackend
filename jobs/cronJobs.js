@@ -66,8 +66,8 @@ if (process.env.ENABLE_CRONS === "true") {
         sendMealReminder("وقت الغداء! 🥗", "لا تنسَ الالتزام بالكميات المحددة في خطتك لتعزيز طاقتك.", "Lunch");
     });
 
-    // 3. Water Reminder (2:00 PM - existing)
-    cron.schedule("0 14 * * *", async () => {
+    // 3. Water Reminder (Test: 4:45 PM Local / 1:45 PM UTC)
+    cron.schedule("45 13 * * *", async () => {
         try {
             console.log("Running Daily Water Reminder Cron Job...");
             const users = await prisma.user.findMany();
