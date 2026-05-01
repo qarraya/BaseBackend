@@ -76,11 +76,15 @@ export const mockCheckout = async (req, res) => {
       });
     }
 
-    const { fullName, cardNumber, expiryDate, cvv } = req.body;
+    const { fullName, email, cardNumber, expiryDate, cvv } = req.body;
 
     // Validation (Simulation for graduation project)
     if (!fullName || fullName.trim().length < 3) {
       return res.status(400).json({ success: false, message: "الاسم الكامل غير صالح أو قصير جداً" });
+    }
+
+    if (!email || !email.includes('@') || !email.includes('.')) {
+      return res.status(400).json({ success: false, message: "البريد الإلكتروني غير صالح" });
     }
     
     const cleanedCardNumber = cardNumber ? cardNumber.replace(/\s+/g, '') : '';
