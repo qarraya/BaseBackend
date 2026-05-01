@@ -11,7 +11,8 @@ const adminPublic = (a) => ({
   id: a.id,
   username: a.username,
   name: a.name,
-  isActive: a.isActive,
+  email: a.email,
+  isActive: a.isActive ?? true,
   lastLogin: a.lastLogin,
   createdAt: a.createdAt,
 });
@@ -23,7 +24,7 @@ const signAdminToken = (admin) => {
       username: admin.username, 
       name: admin.name, 
       role: "admin",
-      tokenVersion: admin.tokenVersion // For "Logout from all devices"
+      tokenVersion: admin.tokenVersion || 0 
     },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
@@ -33,38 +34,57 @@ const signAdminToken = (admin) => {
 export const adminLogin = async (req, res) => {
   try {
     const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ message: "Missing credentials" });
+
     const admin = await prisma.admin.findUnique({ where: { username: username.trim() } });
+    
     if (!admin || !(await bcrypt.compare(password, admin.password))) {
       return res.status(401).json({ message: "Invalid username or password." });
     }
-    if (!admin.isActive) {
-        return res.status(403).json({ message: "Account is inactive. Please contact support." });
+
+    if (admin.isActive === false) {
+        return res.status(403).json({ message: "Account is inactive." });
     }
-    await prisma.admin.update({ where: { id: admin.id }, data: { lastLogin: new Date() } });
-    return res.status(200).json({ message: "Login successful.", token: signAdminToken(admin), admin: adminPublic(admin) });
-  } catch (error) { res.status(500).json({ message: "Server error" }); }
+
+    await prisma.admin.update({ 
+      where: { id: admin.id }, 
+      data: { lastLogin: new Date() } 
+    });
+
+    return res.status(200).json({ 
+      success: true,
+      message: "Login successful.", 
+      token: signAdminToken(admin), 
+      admin: adminPublic(admin) 
+    });
+  } catch (error) { 
+    console.error("Login Error:", error);
+    res.status(500).json({ message: "Server error" }); 
+  }
 };
 
 export const adminRegister = async (req, res) => {
   try {
-    const { name, username, password } = req.body;
+    const { name, username, password, email } = req.body;
     const hashed = await bcrypt.hash(password, 10);
-    const admin = await prisma.admin.create({ data: { name: name.trim(), username: username.trim(), password: hashed, lastLogin: new Date() } });
-    return res.status(201).json({ message: "Admin registered.", token: signAdminToken(admin), admin: adminPublic(admin) });
+    const admin = await prisma.admin.create({ 
+      data: { name: name.trim(), username: username.trim(), email: email?.trim(), password: hashed, lastLogin: new Date() } 
+    });
+    return res.status(201).json({ success: true, message: "Admin registered.", token: signAdminToken(admin), admin: adminPublic(admin) });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 };
 
-// Unified Account & Security Settings
 export const updateAdminProfile = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, username, password } = req.body;
+    const { name, username, email, password } = req.body;
     const data = {};
     if (name) data.name = name.trim();
     if (username) data.username = username.trim();
+    if (email) data.email = email.trim().toLowerCase();
     if (password) data.password = await bcrypt.hash(password, 10);
     const admin = await prisma.admin.update({ where: { id }, data });
-    return res.status(200).json({ message: "Profile updated.", admin: adminPublic(admin) });
+    return res.status(200).json({ success: true, message: "Profile updated.", admin: adminPublic(admin) });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 };
 
@@ -72,35 +92,32 @@ export const updateAdminProfile = async (req, res) => {
  * --- ADVANCED SECURITY ---
  */
 
-// Logout from all devices (Self or Another Admin)
 export const logoutAllSessions = async (req, res) => {
   try {
-    const { id } = req.params; // If ID is provided in URL
-    const targetId = id || req.user.id; // Default to self
-
+    const { id } = req.params;
+    const targetId = id || req.user.id;
     await prisma.admin.update({
       where: { id: targetId },
       data: { tokenVersion: { increment: 1 } }
     });
-    res.status(200).json({ success: true, message: `Logged out ${id ? 'admin' : 'all sessions'} successfully.` });
+    res.status(200).json({ success: true, message: "Logged out from all devices." });
   } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
 };
 
-// Temporary deactivate account
 export const toggleAdminActiveStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const admin = await prisma.admin.findUnique({ where: { id } });
         const updated = await prisma.admin.update({
             where: { id },
-            data: { isActive: !admin.isActive, tokenVersion: { increment: 1 } } // Also log out
+            data: { isActive: !admin.isActive, tokenVersion: { increment: 1 } }
         });
         res.status(200).json({ success: true, message: `Admin ${updated.isActive ? 'activated' : 'deactivated'}.`, isActive: updated.isActive });
     } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
 };
 
 /**
- * --- NUTRITIONAL RULES (The "Brain") ---
+ * --- NUTRITIONAL RULES ---
  */
 
 export const getNutritionalRules = async (req, res) => {
@@ -190,7 +207,7 @@ export const broadcastNotification = async (req, res) => {
  */
 export const listAdmins = async (req, res) => {
   try {
-    const admins = await prisma.admin.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, username: true, name: true, isActive: true, lastLogin: true, createdAt: true } });
+    const admins = await prisma.admin.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, username: true, name: true, email: true, isActive: true, lastLogin: true, createdAt: true } });
     res.status(200).json({ admins });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
 };
