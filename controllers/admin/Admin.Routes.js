@@ -8,14 +8,11 @@ import {
 } from "./Admin.Controller.js";
 import {
   getAdminStats,
-  broadcastNotification
-} from "./Admin.Dashboard.Controller.js";
-import {
-  listPendingQuestions,
   listAllQuestions,
   answerQuestion,
-  deleteQuestion
-} from "./Admin.Questions.Controller.js";
+  deleteQuestion,
+  broadcastNotification
+} from "./Admin.Management.Controller.js";
 import { verifyAdmin } from "../../middleware/verifyAdmin.js";
 
 const router = express.Router();
@@ -23,10 +20,9 @@ const router = express.Router();
 router.post("/login", adminLogin);
 router.post("/register", adminRegister);
 
-// Dashboard & Management
+// Management
 router.get("/stats", verifyAdmin, getAdminStats);
 router.get("/questions/all", verifyAdmin, listAllQuestions);
-router.get("/questions/pending", verifyAdmin, listPendingQuestions);
 router.post("/questions/:questionId/answer", verifyAdmin, answerQuestion);
 router.delete("/questions/:questionId", verifyAdmin, deleteQuestion);
 router.post("/broadcast", verifyAdmin, broadcastNotification);
