@@ -10,8 +10,8 @@ const adminPublic = (a) => ({
   createdAt: a.createdAt,
 });
 
-const signAdminToken = (admin) =>
-  jwt.sign(
+const signAdminToken = (admin) => {
+  return jwt.sign(
     {
       id: admin.id,
       username: admin.username,
@@ -19,8 +19,9 @@ const signAdminToken = (admin) =>
       role: "admin",
     },
     process.env.JWT_SECRET,
-    { expiresIn: "7d" },
+    { expiresIn: "7d" }
   );
+};
 
 export const adminLogin = async (req, res) => {
   try {
