@@ -26,12 +26,6 @@ router.get("/questions/pending", verifyAdmin, listPendingQuestions);
 router.post("/questions/:questionId/answer", verifyAdmin, answerQuestion);
 router.post("/broadcast", verifyAdmin, broadcastNotification);
 
-// TEMPORARY: Clear all admins (Delete after use!)
-router.delete("/clear-all-danger", async (req, res) => {
-  await prisma.admin.deleteMany({});
-  res.json({ message: "All admins deleted. You can now register a new one." });
-});
-
 router.get("/", verifyAdmin, listAdmins);
 router.put("/:id", verifyAdmin, updateAdmin);
 router.delete("/:id", verifyAdmin, deleteAdmin);
