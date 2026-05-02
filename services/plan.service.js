@@ -21,6 +21,8 @@ function buildEntitlementForPlanResponse(reserved, summary) {
     messageAr = FIRST_MONTH_FREE_MESSAGE_AR;
   } else if (reserved.reason === PLAN_GEN_REASON.SUBSCRIBED) {
     messageAr = SUBSCRIPTION_ACTIVE_PLAN_MESSAGE_AR;
+  } else if (reserved.reason === PLAN_GEN_REASON.TRIAL) {
+    messageAr = FIRST_MONTH_FREE_MESSAGE_AR;
   }
 
   return {
@@ -28,6 +30,9 @@ function buildEntitlementForPlanResponse(reserved, summary) {
     hasActiveSubscription: summary?.hasActiveSubscription ?? false,
     subscriptionEndDate: summary?.subscriptionEndDate ?? null,
     freePlansRemaining: summary?.freePlansRemaining ?? 0,
+    inTrial: summary?.inTrial ?? false,
+    trialStartDate: summary?.trialStartDate ?? null,
+    trialEndDate: summary?.trialEndDate ?? null,
     canGenerateAgain: summary?.canGenerateAgain ?? false,
     messageAr,
   };

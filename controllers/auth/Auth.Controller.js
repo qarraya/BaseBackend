@@ -252,15 +252,6 @@ export const logIn = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    const LOGIN_WELCOME_MESSAGE = "تم تسجيل دخولك بنجاح. نتمنى لك يوماً صحياً!";
-    
-    await createSystemNotification(
-      user.id,
-      `أهلاً ${user.username}!`,
-      LOGIN_WELCOME_MESSAGE,
-      "SUCCESS",
-    );
-
     /* ------------------ Success Response ------------------ */
     return res.status(200).json({
       message: "Login successful.",

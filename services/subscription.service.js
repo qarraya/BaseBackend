@@ -13,6 +13,7 @@ const entitlementSelect = {
   id: true,
   freePlansCount: true,
   subscriptionEndDate: true,
+  createdAt: true,
 };
 
 /**
@@ -23,6 +24,17 @@ const entitlementSelect = {
 export function hasActiveSubscriptionWindow(user) {
   if (!user?.subscriptionEndDate) return false;
   return user.subscriptionEndDate > new Date();
+}
+
+/**
+ * Whether the user is within their first 30 days of account creation.
+ */
+export function isInTrialPeriod(user) {
+  if (!user?.createdAt) return false;
+  const trialDurationDays = 30;
+  const trialEndDate = new Date(user.createdAt);
+  trialEndDate.setDate(trialEndDate.getDate() + trialDurationDays);
+  return new Date() < trialEndDate;
 }
 
 /**
@@ -40,6 +52,9 @@ export function evaluatePlanGenerationFromUserRow(user) {
   }
   if (hasActiveSubscriptionWindow(user)) {
     return { allowed: true, reason: PLAN_GEN_REASON.SUBSCRIBED };
+  }
+  if (isInTrialPeriod(user)) {
+    return { allowed: true, reason: PLAN_GEN_REASON.TRIAL };
   }
   if (user.freePlansCount > 0) {
     return { allowed: true, reason: PLAN_GEN_REASON.FREE_PLAN };
@@ -74,14 +89,17 @@ export async function getUserEntitlementSummary(userId) {
   if (!user) return null;
 
   const hasActiveSubscription = hasActiveSubscriptionWindow(user);
+  const inTrial = isInTrialPeriod(user);
   const freePlansRemaining = user.freePlansCount;
 
   return {
     hasActiveSubscription,
     subscriptionEndDate: user.subscriptionEndDate,
     freePlansRemaining,
-    /** Whether another generate would pass the gate right now (subscription window or credits). */
-    canGenerateAgain: hasActiveSubscription || freePlansRemaining > 0,
+    inTrial,
+    trialStartDate: user.createdAt,
+    /** Whether another generate would pass the gate right now (subscription window, trial, or credits). */
+    canGenerateAgain: hasActiveSubscription || inTrial || freePlansRemaining > 0,
   };
 }
 
@@ -104,6 +122,10 @@ export async function reservePlanGenerationEntitlement(userId) {
     // Paid/granted window: active iff end date is strictly in the future.
     if (user.subscriptionEndDate && user.subscriptionEndDate > now) {
       return { ok: true, userExists: true, reason: PLAN_GEN_REASON.SUBSCRIBED };
+    }
+
+    if (isInTrialPeriod(user)) {
+      return { ok: true, userExists: true, reason: PLAN_GEN_REASON.TRIAL };
     }
 
     if (user.freePlansCount > 0) {
@@ -205,14 +227,16 @@ export async function getSubscriptionStatusForClient(userId) {
       isSubscribed: true,
       subscriptionEndDate: true,
       freePlansCount: true,
+      createdAt: true,
     },
   });
   if (!row) return null;
 
   const now = new Date();
   const hasActiveSubscription = hasActiveSubscriptionWindow(row);
+  const inTrial = isInTrialPeriod(row);
   const freePlansRemaining = row.freePlansCount;
-  const canGenerateAgain = hasActiveSubscription || freePlansRemaining > 0;
+  const canGenerateAgain = hasActiveSubscription || inTrial || freePlansRemaining > 0;
 
   /** Had an end date set and it is no longer in the future (subscription “period” over). */
   const subscriptionWindowExpired =
@@ -223,13 +247,19 @@ export async function getSubscriptionStatusForClient(userId) {
 
   /** Banner for plan screen: first month free while user still has trial credit and no active sub. */
   const planPageMessageAr =
-    !hasActiveSubscription && freePlansRemaining > 0 ? FIRST_MONTH_FREE_MESSAGE_AR : null;
+    !hasActiveSubscription && (inTrial || freePlansRemaining > 0) ? FIRST_MONTH_FREE_MESSAGE_AR : null;
+
+  const trialEndDate = new Date(row.createdAt);
+  trialEndDate.setDate(trialEndDate.getDate() + 30);
 
   return {
     isSubscribed: row.isSubscribed,
     subscriptionEndDate: row.subscriptionEndDate,
     freePlansRemaining,
     hasActiveSubscription,
+    inTrial,
+    trialStartDate: row.createdAt,
+    trialEndDate: trialEndDate,
     subscriptionWindowExpired,
     canGenerateAgain,
     needsSubscriptionToGenerate,
@@ -249,10 +279,11 @@ export async function getPlanPageMessageArForUser(userId) {
     select: {
       subscriptionEndDate: true,
       freePlansCount: true,
+      createdAt: true,
     },
   });
   if (!row) return null;
   if (hasActiveSubscriptionWindow(row)) return null;
-  if (row.freePlansCount > 0) return FIRST_MONTH_FREE_MESSAGE_AR;
+  if (isInTrialPeriod(row) || row.freePlansCount > 0) return FIRST_MONTH_FREE_MESSAGE_AR;
   return null;
 }

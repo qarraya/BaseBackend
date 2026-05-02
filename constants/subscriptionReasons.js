@@ -5,5 +5,6 @@
 export const PLAN_GEN_REASON = {
   SUBSCRIBED: "subscribed",
   FREE_PLAN: "free_plan",
+  TRIAL: "trial",
   SUBSCRIPTION_REQUIRED: "subscription_required",
 };
