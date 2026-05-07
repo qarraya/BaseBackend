@@ -252,6 +252,8 @@ export async function getSubscriptionStatusForClient(userId) {
   const trialEndDate = new Date(row.createdAt);
   trialEndDate.setDate(trialEndDate.getDate() + 30);
 
+  const trialDaysRemaining = Math.max(0, Math.ceil((trialEndDate - now) / (1000 * 60 * 60 * 24)));
+
   return {
     isSubscribed: row.isSubscribed,
     subscriptionEndDate: row.subscriptionEndDate,
@@ -260,6 +262,7 @@ export async function getSubscriptionStatusForClient(userId) {
     inTrial,
     trialStartDate: row.createdAt,
     trialEndDate: trialEndDate,
+    trialDaysRemaining,
     subscriptionWindowExpired,
     canGenerateAgain,
     needsSubscriptionToGenerate,

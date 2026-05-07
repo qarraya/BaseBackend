@@ -76,6 +76,8 @@ export const checkExpiredSubscriptions = async () => {
     try {
         console.log("Running Expired Subscriptions Cron Job...");
         const now = new Date();
+
+        /* 1. Paid Subscription Expiry */
         const expiredUsers = await prisma.user.findMany({
             where: {
                 isSubscribed: true,
@@ -95,8 +97,43 @@ export const checkExpiredSubscriptions = async () => {
                 "WARNING"
             );
         }
-        console.log(`Processed ${expiredUsers.length} expired subscriptions.`);
-        return { success: true, processed: expiredUsers.length };
+
+        /* 2. Trial Period Expiry (Exactly 30 days ago) */
+        // We look for users created between (now - 31 days) and (now - 30 days) 
+        // who haven't been notified yet or just hit the mark.
+        // Actually, to avoid multiple notifications, we might need a flag, 
+        // but for a simple cron we can check the exact day.
+        
+        const thirtyDaysAgoStart = new Date(now);
+        thirtyDaysAgoStart.setDate(thirtyDaysAgoStart.getDate() - 30);
+        thirtyDaysAgoStart.setHours(0,0,0,0);
+        
+        const thirtyDaysAgoEnd = new Date(now);
+        thirtyDaysAgoEnd.setDate(thirtyDaysAgoEnd.getDate() - 30);
+        thirtyDaysAgoEnd.setHours(23,59,59,999);
+
+        const expiredTrialUsers = await prisma.user.findMany({
+            where: {
+                isSubscribed: false,
+                createdAt: {
+                    gte: thirtyDaysAgoStart,
+                    lte: thirtyDaysAgoEnd
+                }
+            }
+        });
+
+        for (const user of expiredTrialUsers) {
+            await createSystemNotification(
+                user.id,
+                "انتهت الفترة التجريبية 🔚",
+                "لقد انتهت الـ 30 يوماً التجريبية الخاصة بك. نتمنى أن تكون قد استفدت! اشترك الآن لتستمر في الحصول على خطط غذائية بلا حدود.",
+                "INFO"
+            );
+        }
+
+        const totalProcessed = expiredUsers.length + expiredTrialUsers.length;
+        console.log(`Processed ${totalProcessed} expired (Sub: ${expiredUsers.length}, Trial: ${expiredTrialUsers.length}).`);
+        return { success: true, processed: totalProcessed };
     } catch (error) {
         console.error("Cron Job Error (Expired Subscriptions):", error);
         throw error;
@@ -106,12 +143,14 @@ export const checkExpiredSubscriptions = async () => {
 export const checkNearExpirySubscriptions = async () => {
     try {
         console.log("Running 3-Day Expiry Warning Cron Job...");
+        const now = new Date();
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + 3);
 
         const startOfTarget = new Date(targetDate.setHours(0, 0, 0, 0));
         const endOfTarget = new Date(targetDate.setHours(23, 59, 59, 999));
 
+        /* 1. Paid Subscription Near Expiry */
         const usersNearExpiry = await prisma.user.findMany({
             where: {
                 isSubscribed: true,
@@ -131,8 +170,40 @@ export const checkNearExpirySubscriptions = async () => {
             );
         }
 
-        console.log(`Sent expiry warnings to ${usersNearExpiry.length} users.`);
-        return { success: true, notified: usersNearExpiry.length };
+        /* 2. Trial Period Near Expiry (30 days from creation) */
+        // If today is targetDate, trialEndDate is 30 days from createdAt.
+        // trialEndDate = createdAt + 30 days.
+        // If trialEndDate is in [startOfTarget, endOfTarget], then:
+        // createdAt + 30 days is in [startOfTarget, endOfTarget].
+        // createdAt is in [startOfTarget - 30 days, endOfTarget - 30 days].
+
+        const startOfTrialCreationTarget = new Date(startOfTarget);
+        startOfTrialCreationTarget.setDate(startOfTrialCreationTarget.getDate() - 30);
+        const endOfTrialCreationTarget = new Date(endOfTarget);
+        endOfTrialCreationTarget.setDate(endOfTrialCreationTarget.getDate() - 30);
+
+        const usersNearTrialExpiry = await prisma.user.findMany({
+            where: {
+                isSubscribed: false, // Only those who haven't subscribed yet
+                createdAt: {
+                    gte: startOfTrialCreationTarget,
+                    lte: endOfTrialCreationTarget
+                }
+            }
+        });
+
+        for (const user of usersNearTrialExpiry) {
+            await createSystemNotification(
+                user.id,
+                "تنبيه: قارب شهرك المجاني على الانتهاء! 🎁",
+                "بقي 3 أيام فقط على انتهاء فترتك التجريبية المجانية. اشترك الآن لتستمر في الحصول على أفضل الخطط الغذائية والنصائح الصحية!",
+                "WARNING"
+            );
+        }
+
+        const totalNotified = usersNearExpiry.length + usersNearTrialExpiry.length;
+        console.log(`Sent expiry warnings to ${totalNotified} users (${usersNearExpiry.length} sub, ${usersNearTrialExpiry.length} trial).`);
+        return { success: true, notified: totalNotified };
     } catch (error) {
         console.error("Cron Job Error (3-Day Expiry Warning):", error);
         throw error;

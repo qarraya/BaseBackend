@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { generateUserPlan } from "../../utils/planGenerator.js";
 import { createSystemNotification } from "../../utils/notificationService.js";
 import { sendPasswordResetOTP } from "../../utils/mailService.js";
+import { getSubscriptionStatusForClient } from "../../services/subscription.service.js";
 
 dotenv.config();
 
@@ -122,7 +123,7 @@ export const signUp = async (req, res) => {
     await createSystemNotification(
       result.user.id,
       "مرحباً بك في التطبيق! 🎉",
-      "تم إنشاء حسابك بنجاح. نتمنى لك رحلة صحية موفقة.",
+      "تم إنشاء حسابك بنجاح. لقد حصلت على فترة تجريبية مجانية لمدة 30 يوماً لتجربة كافة المميزات. نتمنى لك رحلة صحية موفقة.",
       "SUCCESS"
     );
 
@@ -263,6 +264,7 @@ export const logIn = async (req, res) => {
         createdAt: user.createdAt,
         profile: user.profile,
         accessToken: accessToken,
+        subscription: await getSubscriptionStatusForClient(user.id),
       },
     });
   } catch (error) {
@@ -331,6 +333,7 @@ export const getUserData = async (req, res) => {
         plans: user.plans,
         progress: user.progress,
         notifications: user.notifications,
+        subscription: await getSubscriptionStatusForClient(user.id),
       },
     });
   } catch (error) {
