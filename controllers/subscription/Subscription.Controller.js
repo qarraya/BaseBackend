@@ -114,3 +114,32 @@ export const mockCheckout = async (req, res) => {
     });
   }
 };
+
+/**
+ * Start the 30-day trial for the user.
+ */
+export const startTrial = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required"
+      });
+    }
+
+    const result = await subscriptionService.startTrial(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "تم بدء الفترة التجريبية بنجاح لمدة 30 يوماً.",
+      ...result
+    });
+  } catch (error) {
+    console.error("startTrial Error:", error);
+    return res.status(400).json({
+      success: false,
+      message: error.message || "حدث خطأ أثناء بدء الفترة التجريبية",
+    });
+  }
+};

@@ -260,7 +260,17 @@ export async function getUserPlanOrGenerate(userId) {
     planPageMessageAr: await subscriptionService.getPlanPageMessageArForUser(userId),
   });
 
+  // Check if the plan is valid, has meals, and covers "Today" as a DayNumber
+  let isPlanValid = false;
   if (plan && new Date(plan.endDate) >= today && plan.meals && plan.meals.length > 0) {
+    const dayDiff = Math.floor((today - new Date(plan.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+    const hasMealsForToday = plan.meals.some(m => m.dayNumber === dayDiff);
+    if (hasMealsForToday) {
+      isPlanValid = true;
+    }
+  }
+
+  if (isPlanValid) {
     return withPlanPageBanner(mapPlanMealsForClient(plan));
   }
 

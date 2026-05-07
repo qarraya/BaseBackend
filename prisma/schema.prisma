@@ -91,6 +91,11 @@ model User {
   /// Remaining complimentary plan generations (trial / gifts). Not tied to Plan row history.
   freePlansCount Int @default(1)
 
+  /// Trial fields
+  inTrial            Boolean   @default(false)
+  trialStartDate     DateTime?
+  trialDaysRemaining Int       @default(30)
+
   /// Whether the user currently has a paid (or granted) subscription flag set.
   isSubscribed Boolean @default(false)
 

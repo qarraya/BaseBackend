@@ -115,7 +115,8 @@ export const checkExpiredSubscriptions = async () => {
         const expiredTrialUsers = await prisma.user.findMany({
             where: {
                 isSubscribed: false,
-                createdAt: {
+                inTrial: true,
+                trialStartDate: {
                     gte: thirtyDaysAgoStart,
                     lte: thirtyDaysAgoEnd
                 }
@@ -123,6 +124,10 @@ export const checkExpiredSubscriptions = async () => {
         });
 
         for (const user of expiredTrialUsers) {
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { inTrial: false }
+            });
             await createSystemNotification(
                 user.id,
                 "انتهت الفترة التجريبية 🔚",
@@ -184,8 +189,9 @@ export const checkNearExpirySubscriptions = async () => {
 
         const usersNearTrialExpiry = await prisma.user.findMany({
             where: {
-                isSubscribed: false, // Only those who haven't subscribed yet
-                createdAt: {
+                isSubscribed: false,
+                inTrial: true,
+                trialStartDate: {
                     gte: startOfTrialCreationTarget,
                     lte: endOfTrialCreationTarget
                 }

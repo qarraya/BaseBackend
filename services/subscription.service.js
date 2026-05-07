@@ -14,6 +14,9 @@ const entitlementSelect = {
   freePlansCount: true,
   subscriptionEndDate: true,
   createdAt: true,
+  inTrial: true,
+  trialStartDate: true,
+  trialDaysRemaining: true,
 };
 
 /**
@@ -30,10 +33,11 @@ export function hasActiveSubscriptionWindow(user) {
  * Whether the user is within their first 30 days of account creation.
  */
 export function isInTrialPeriod(user) {
-  if (!user?.createdAt) return false;
-  const trialDurationDays = 30;
-  const trialEndDate = new Date(user.createdAt);
-  trialEndDate.setDate(trialEndDate.getDate() + trialDurationDays);
+  if (!user?.inTrial || !user?.trialStartDate) return false;
+  
+  const trialEndDate = new Date(user.trialStartDate);
+  trialEndDate.setDate(trialEndDate.getDate() + (user.trialDaysRemaining || 30));
+  
   return new Date() < trialEndDate;
 }
 
@@ -97,7 +101,7 @@ export async function getUserEntitlementSummary(userId) {
     subscriptionEndDate: user.subscriptionEndDate,
     freePlansRemaining,
     inTrial,
-    trialStartDate: user.createdAt,
+    trialStartDate: user.trialStartDate,
     /** Whether another generate would pass the gate right now (subscription window, trial, or credits). */
     canGenerateAgain: hasActiveSubscription || inTrial || freePlansRemaining > 0,
   };
@@ -193,6 +197,31 @@ export async function activateUserSubscription(userId, durationDays = 30) {
 }
 
 /**
+ * Manually start the 30-day trial.
+ */
+export async function startTrial(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { inTrial: true, trialStartDate: true }
+  });
+
+  if (!user) throw new Error("User not found");
+  if (user.inTrial || user.trialStartDate) {
+    throw new Error("Trial already started or used");
+  }
+
+  return await prisma.user.update({
+    where: { id: userId },
+    data: {
+      inTrial: true,
+      trialStartDate: new Date(),
+      trialDaysRemaining: 30,
+    },
+    select: entitlementSelect
+  });
+}
+
+/**
  * Cancel / clear paid window (e.g. dev reset after testing activate).
  * Trial balance `freePlansCount` is left unchanged.
  */
@@ -228,6 +257,9 @@ export async function getSubscriptionStatusForClient(userId) {
       subscriptionEndDate: true,
       freePlansCount: true,
       createdAt: true,
+      inTrial: true,
+      trialStartDate: true,
+      trialDaysRemaining: true,
     },
   });
   if (!row) return null;
@@ -249,10 +281,15 @@ export async function getSubscriptionStatusForClient(userId) {
   const planPageMessageAr =
     !hasActiveSubscription && (inTrial || freePlansRemaining > 0) ? FIRST_MONTH_FREE_MESSAGE_AR : null;
 
-  const trialEndDate = new Date(row.createdAt);
-  trialEndDate.setDate(trialEndDate.getDate() + 30);
+  const trialStartDate = row.trialStartDate;
+  let trialEndDate = null;
+  let trialDaysRemaining = row.trialDaysRemaining;
 
-  const trialDaysRemaining = Math.max(0, Math.ceil((trialEndDate - now) / (1000 * 60 * 60 * 24)));
+  if (trialStartDate) {
+    trialEndDate = new Date(trialStartDate);
+    trialEndDate.setDate(trialEndDate.getDate() + trialDaysRemaining);
+    trialDaysRemaining = Math.max(0, Math.ceil((trialEndDate - now) / (1000 * 60 * 60 * 24)));
+  }
 
   return {
     isSubscribed: row.isSubscribed,
@@ -260,8 +297,8 @@ export async function getSubscriptionStatusForClient(userId) {
     freePlansRemaining,
     hasActiveSubscription,
     inTrial,
-    trialStartDate: row.createdAt,
-    trialEndDate: trialEndDate,
+    trialStartDate,
+    trialEndDate,
     trialDaysRemaining,
     subscriptionWindowExpired,
     canGenerateAgain,
@@ -283,6 +320,9 @@ export async function getPlanPageMessageArForUser(userId) {
       subscriptionEndDate: true,
       freePlansCount: true,
       createdAt: true,
+      inTrial: true,
+      trialStartDate: true,
+      trialDaysRemaining: true,
     },
   });
   if (!row) return null;

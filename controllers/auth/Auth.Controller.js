@@ -65,8 +65,6 @@ export const signUp = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     /* ------------------ Create User and Profile (Transaction) ------------------ */
-    const trialEndDate = new Date();
-    trialEndDate.setDate(trialEndDate.getDate() + 30);
 
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -78,6 +76,9 @@ export const signUp = async (req, res) => {
           isSubscribed: false,
           subscriptionEndDate: null,
           freePlansCount: 1, // Give 1 free plan generation instead of full subscription
+          inTrial: false,
+          trialStartDate: null,
+          trialDaysRemaining: 30,
         },
       });
       const profile = await tx.profile.create({
@@ -123,7 +124,7 @@ export const signUp = async (req, res) => {
     await createSystemNotification(
       result.user.id,
       "مرحباً بك في التطبيق! 🎉",
-      "تم إنشاء حسابك بنجاح. لقد حصلت على فترة تجريبية مجانية لمدة 30 يوماً لتجربة كافة المميزات. نتمنى لك رحلة صحية موفقة.",
+      "تم إنشاء حسابك بنجاح. يمكنك بدء فترتك التجريبية المجانية لمدة 30 يوماً في أي وقت من صفحة الاشتراك لتجربة كافة المميزات.",
       "SUCCESS"
     );
 
@@ -149,7 +150,7 @@ export const signUp = async (req, res) => {
 
     /* ------------------ Success Response ------------------ */
     return res.status(201).json({
-      message: "User registered successfully.",
+      message: "User registered successfully (v2).",
       token: accessToken,
       user: {
         id: result.user.id,
