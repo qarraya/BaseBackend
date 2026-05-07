@@ -157,6 +157,7 @@ export const signUp = async (req, res) => {
         email: result.user.email,
         isVerified: result.user.isVerified,
         createdAt: result.user.createdAt,
+        subscription: await getSubscriptionStatusForClient(result.user.id),
       },
     });
   } catch (error) {
