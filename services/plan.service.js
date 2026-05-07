@@ -166,7 +166,7 @@ export async function generatePlanForUser({ userId, startDate, endDate }) {
       where: { id: plan.id },
       include: mealsWithMealInclude,
     });
-    
+
     const planPayload = mapPlanMealsForClient(completePlan || plan);
     const summary = await subscriptionService.getUserEntitlementSummary(userId);
 
@@ -260,7 +260,7 @@ export async function getUserPlanOrGenerate(userId) {
     planPageMessageAr: await subscriptionService.getPlanPageMessageArForUser(userId),
   });
 
-  if (plan && new Date(plan.endDate) >= today) {
+  if (plan && new Date(plan.endDate) >= today && plan.meals && plan.meals.length > 0) {
     return withPlanPageBanner(mapPlanMealsForClient(plan));
   }
 
@@ -289,8 +289,8 @@ export async function getUserPlanOrGenerate(userId) {
 /* ------------------ Pure CRUD methods for Controller ------------------ */
 
 export async function findAllPlans() {
-  return prisma.plan.findMany({ 
-    include: { user: true } 
+  return prisma.plan.findMany({
+    include: { user: true }
   });
 }
 
@@ -305,8 +305,8 @@ export async function getPlanByIdWithFullData(id) {
 }
 
 export async function updatePlan(id, data) {
-  const plan = await prisma.plan.update({ 
-    where: { id }, 
+  const plan = await prisma.plan.update({
+    where: { id },
     data,
     include: mealsWithMealInclude
   });
