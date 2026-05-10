@@ -15,3 +15,6 @@ export const FIRST_MONTH_FREE_MESSAGE_AR =
 /** يظهر في رد توليد الخطة عند استخدام اشتراك ساري (subscribed). */
 export const SUBSCRIPTION_ACTIVE_PLAN_MESSAGE_AR =
   "تم إنشاء خطتك ضمن اشتراكك النشط.";
+
+export const THANK_YOU_SUBSCRIBER_MESSAGE_AR =
+  "شكراً لثقتك بنا! استمتع بكامل المزايا والخطط الصحية المخصصة لك. 🌟";

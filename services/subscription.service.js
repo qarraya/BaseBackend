@@ -4,6 +4,7 @@ import {
   FIRST_MONTH_FREE_MESSAGE_AR,
   SUBSCRIPTION_EXPIRED_MESSAGE_AR,
   FREE_TRIAL_EXHAUSTED_MESSAGE_AR,
+  THANK_YOU_SUBSCRIBER_MESSAGE_AR,
 } from "../constants/subscriptionMessages.js";
 
 /**
@@ -278,8 +279,9 @@ export async function getSubscriptionStatusForClient(userId) {
   const needsSubscriptionToGenerate = !canGenerateAgain;
 
   /** Banner for plan screen: first month free while user still has trial credit and no active sub. */
-  const planPageMessageAr =
-    !hasActiveSubscription && (inTrial || freePlansRemaining > 0) ? FIRST_MONTH_FREE_MESSAGE_AR : null;
+  const planPageMessageAr = hasActiveSubscription 
+    ? THANK_YOU_SUBSCRIBER_MESSAGE_AR 
+    : (inTrial || freePlansRemaining > 0 ? FIRST_MONTH_FREE_MESSAGE_AR : null);
 
   const trialStartDate = row.trialStartDate;
   let trialEndDate = null;
