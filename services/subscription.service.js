@@ -293,11 +293,11 @@ export async function getSubscriptionStatusForClient(userId) {
 
   const trialStartDate = row.trialStartDate;
   let trialEndDate = null;
-  let trialDaysRemaining = row.trialDaysRemaining;
+  let trialDaysRemaining = 0; // Default to 0 instead of DB value
 
-  if (trialStartDate) {
+  if (trialStartDate && inTrial) {
     trialEndDate = new Date(trialStartDate);
-    trialEndDate.setDate(trialEndDate.getDate() + trialDaysRemaining);
+    trialEndDate.setDate(trialEndDate.getDate() + (row.trialDaysRemaining || 30));
     trialDaysRemaining = Math.max(0, Math.ceil((trialEndDate - now) / (1000 * 60 * 60 * 24)));
   }
 
