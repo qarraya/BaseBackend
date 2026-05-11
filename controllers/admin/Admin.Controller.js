@@ -129,11 +129,11 @@ export const getNutritionalRules = async (req, res) => {
 
 export const upsertNutritionalRule = async (req, res) => {
   try {
-    const { gender, activityLevel, goal, calories, protein, fats, carbs } = req.body;
+    const { gender, activityLevel, goal, calories, proteins, fats, carbs } = req.body;
     const rule = await prisma.nutritionalRule.upsert({
       where: { gender_activityLevel_goal: { gender, activityLevel, goal } },
-      update: { calories, protein, fats, carbs },
-      create: { gender, activityLevel, goal, calories, protein, fats, carbs }
+      update: { calories, proteins, fats, carbs },
+      create: { gender, activityLevel, goal, calories, proteins, fats, carbs }
     });
     res.status(200).json({ success: true, message: "Nutritional rule saved.", rule });
   } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }

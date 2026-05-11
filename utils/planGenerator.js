@@ -102,8 +102,19 @@ export const generateUserPlan = async (userId, startDate = new Date(), endDate =
       return null;
     }
 
-    // 2. Calculate calories
-    const totalCalories = calculateCalories(
+    // 2. Fetch Nutritional Rule (Custom admin rules)
+    const rule = await prisma.nutritionalRule.findUnique({
+      where: {
+        gender_activityLevel_goal: {
+          gender: profile.gender,
+          activityLevel: profile.activityLevel,
+          goal: profile.goal
+        }
+      }
+    });
+
+    // 3. Set Total Calories (Admin rule priority, then automatic calculation)
+    const totalCalories = rule ? rule.calories : calculateCalories(
       profile.currentWeight,
       profile.height,
       age,

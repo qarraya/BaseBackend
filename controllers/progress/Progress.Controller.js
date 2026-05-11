@@ -27,9 +27,9 @@ export const getProgressDashboard = async (req, res) => {
 
     // 2. Map Goal Text
     const goalMapper = {
-        LOSE: "إنقاص الوزن",
-        MAINTAIN: "الحفاظ على الوزن",
-        GAIN: "زيادة الوزن"
+      LOSE: "إنقاص الوزن",
+      MAINTAIN: "الحفاظ على الوزن",
+      GAIN: "زيادة الوزن"
     };
     const goalText = user.profile?.goal ? (goalMapper[user.profile.goal] || "هدف غير محدد") : "لم يتم تحديد الهدف";
 
@@ -42,11 +42,11 @@ export const getProgressDashboard = async (req, res) => {
     let calculatedTargetWeight = currentWeight;
 
     if (user.profile?.goal === 'LOSE') {
-        calculatedTargetWeight = Number((initialWeight * 0.90).toFixed(1)); // Target 10% loss
+      calculatedTargetWeight = Number((initialWeight * 0.90).toFixed(1)); // Target 10% loss
     } else if (user.profile?.goal === 'GAIN') {
-        calculatedTargetWeight = Number((initialWeight * 1.10).toFixed(1)); // Target 10% gain
+      calculatedTargetWeight = Number((initialWeight * 1.10).toFixed(1)); // Target 10% gain
     } else {
-        calculatedTargetWeight = currentWeight; // MAINTAIN
+      calculatedTargetWeight = currentWeight; // MAINTAIN
     }
 
     // 4. chartData (history)
@@ -73,13 +73,13 @@ export const getProgressDashboard = async (req, res) => {
 
     // 6. Fetch Active Plan (for average calories and macros)
     const activePlan = await prisma.plan.findFirst({
-        where: { userId },
-        include: {
-            meals: {
-                include: { meal: true }
-            }
-        },
-        orderBy: { createdAt: 'desc' }
+      where: { userId },
+      include: {
+        meals: {
+          include: { meal: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
     });
 
     let carbsAvg = 45; // Default fallback
@@ -87,26 +87,26 @@ export const getProgressDashboard = async (req, res) => {
     let planTotalCalories = activePlan ? activePlan.totalCalories : 1934;
 
     if (activePlan && activePlan.meals.length > 0) {
-        let totalCarbsGrams = 0;
-        let totalProteinGrams = 0;
-        let totalPlanCals = 0;
+      let totalCarbsGrams = 0;
+      let totalProteinGrams = 0;
+      let totalPlanCals = 0;
 
-        activePlan.meals.forEach(pm => {
-            const mult = pm.multiplier || 1.0;
-            totalCarbsGrams += (pm.meal.carbs || 0) * mult;
-            totalProteinGrams += (pm.meal.proteins || 0) * mult;
-            totalPlanCals += (pm.meal.calories || 0) * mult;
-        });
+      activePlan.meals.forEach(pm => {
+        const mult = pm.multiplier || 1.0;
+        totalCarbsGrams += (pm.meal.carbs || 0) * mult;
+        totalProteinGrams += (pm.meal.proteins || 0) * mult;
+        totalPlanCals += (pm.meal.calories || 0) * mult;
+      });
 
-        if (totalPlanCals > 0) {
-            // Calculate % of calories from each macro (Grams * 4 / Total Calories)
-            carbsAvg = Math.round((totalCarbsGrams * 4 / totalPlanCals) * 100);
-            proteinAvg = Math.round((totalProteinGrams * 4 / totalPlanCals) * 100);
-            planTotalCalories = Math.round(totalPlanCals / Math.max(1, activePlan.meals.length / 3)); // Approximate daily avg if multi-day
-            
-            // Overwrite with the stored totalCalories if it exists for consistency
-            if (activePlan.totalCalories) planTotalCalories = activePlan.totalCalories;
-        }
+      if (totalPlanCals > 0) {
+        // Calculate % of calories from each macro (Grams * 4 / Total Calories)
+        carbsAvg = Math.round((totalCarbsGrams * 4 / totalPlanCals) * 100);
+        proteinAvg = Math.round((totalProteinGrams * 4 / totalPlanCals) * 100);
+        planTotalCalories = Math.round(totalPlanCals / Math.max(1, activePlan.meals.length / 3)); // Approximate daily avg if multi-day
+
+        // Overwrite with the stored totalCalories if it exists for consistency
+        if (activePlan.totalCalories) planTotalCalories = activePlan.totalCalories;
+      }
     }
 
     // 7. Weekly Summary Calculations
@@ -125,10 +125,10 @@ export const getProgressDashboard = async (req, res) => {
     // Commitment (Adherence)
     const startDate = history.length > 0 ? history[0].date : user.createdAt;
     const daysSinceJoined = Math.max(1, Math.ceil((now - startDate) / (1000 * 60 * 60 * 24)));
-    
+
     // Calculate adherence based on current day of the week (assuming week starts on Monday=1, Sunday=7)
     // getDay() returns 0 for Sunday, 1 for Monday, etc.
-    const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); 
+    const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay();
     const adherenceDays = `${dayOfWeek}/7`;
 
     return res.status(200).json({
