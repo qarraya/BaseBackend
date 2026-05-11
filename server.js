@@ -84,7 +84,7 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/progress", progressRoutes);
-app.use("/api/admin", adminRoutes);
+app.use("/api/system-manager-hq8", adminRoutes);
 app.use("/api/cron", cronRoutes);
 
 /**
