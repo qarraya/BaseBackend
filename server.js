@@ -18,6 +18,7 @@ import subscriptionRoutes from "./controllers/subscription/Subscription.Routes.j
 import progressRoutes from "./controllers/progress/Progress.Routes.js";
 import adminRoutes from "./controllers/admin/Admin.Routes.js";
 import cronRoutes from "./routes/cron.routes.js";
+import questionsRoutes from "./controllers/questions/Questions.Routes.js";
 
 // Initialize scheduled background jobs (No longer using node-cron, migrated to Vercel Cron)
 // import "./jobs/cronJobs.js";
@@ -86,6 +87,7 @@ app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/progress", progressRoutes);
 app.use("/api/system-manager-hq8", adminRoutes);
 app.use("/api/cron", cronRoutes);
+app.use("/api/questions", questionsRoutes);
 
 /**
  * Plan generation (entitlement + atomic reservation in services).
