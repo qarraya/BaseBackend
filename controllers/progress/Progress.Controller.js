@@ -71,7 +71,18 @@ export const getProgressDashboard = async (req, res) => {
     const startOfMonthWeight = startOfMonthRecord ? startOfMonthRecord.previousWeight : initialWeight;
     const monthChange = Number((currentWeight - startOfMonthWeight).toFixed(1));
 
-    // 6. Fetch Active Plan (for average calories and macros)
+    // 6. Fetch Plan History (All plans for the user)
+    const allPlans = await prisma.plan.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        createdAt: true,
+        totalCalories: true,
+        goal: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
     const activePlan = await prisma.plan.findFirst({
       where: { userId },
       include: {
@@ -167,10 +178,17 @@ export const getProgressDashboard = async (req, res) => {
         weightChange,
         comparison: {
           metric: "الوزن",
-          startOfMonthWeight,
           currentWeight,
           change: monthChange
-        }
+        },
+
+        // --- 5. Plan History ---
+        planHistory: allPlans.map(p => ({
+          id: p.id,
+          date: p.createdAt,
+          calories: p.totalCalories,
+          goal: p.goal === 'LOSE' ? 'إنقاص وزن' : (p.goal === 'GAIN' ? 'زيادة وزن' : 'حفاظ على الوزن')
+        }))
       },
     });
   } catch (error) {
