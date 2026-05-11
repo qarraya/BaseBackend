@@ -34,12 +34,20 @@ export function hasActiveSubscriptionWindow(user) {
  * Whether the user is within their first 30 days of account creation.
  */
 export function isInTrialPeriod(user) {
-  if (!user?.inTrial || !user?.trialStartDate) return false;
+  // If the user manually started the trial, we check the date.
+  // If inTrial is false but trialStartDate exists, it might mean it's expired or logic error.
+  // We want to be inclusive: if they have a start date and haven't finished 30 days, they are in trial.
+  if (!user?.trialStartDate) return false;
   
-  const trialEndDate = new Date(user.trialStartDate);
-  trialEndDate.setDate(trialEndDate.getDate() + (user.trialDaysRemaining || 30));
+  const now = new Date();
+  const trialStartDate = new Date(user.trialStartDate);
+  const trialEndDate = new Date(trialStartDate);
   
-  return new Date() < trialEndDate;
+  // Use trialDaysRemaining from DB or default to 30
+  const days = user.trialDaysRemaining ?? 30;
+  trialEndDate.setDate(trialEndDate.getDate() + days);
+  
+  return now < trialEndDate;
 }
 
 /**
