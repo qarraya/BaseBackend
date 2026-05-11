@@ -312,6 +312,7 @@ export async function getSubscriptionStatusForClient(userId) {
     trialDaysRemaining,
     subscriptionWindowExpired,
     canGenerateAgain,
+    isTrialAvailable: !hasActiveSubscription && !inTrial && freePlansRemaining > 0, // New flag
     needsSubscriptionToGenerate,
     messageAr: needsSubscriptionToGenerate 
       ? (row.subscriptionEndDate ? SUBSCRIPTION_EXPIRED_MESSAGE_AR : FREE_TRIAL_EXHAUSTED_MESSAGE_AR) 
