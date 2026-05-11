@@ -222,6 +222,7 @@ export const logIn = async (req, res) => {
             email: admin.email,
             username: admin.username,
             role: "admin",
+            tokenVersion: admin.tokenVersion,
           },
           process.env.JWT_SECRET,
           { expiresIn: "7d" }
