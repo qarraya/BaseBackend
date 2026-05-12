@@ -103,11 +103,19 @@ export const generateUserPlan = async (userId, startDate = new Date(), endDate =
     }
 
     // 2. Fetch Nutritional Rule (Custom admin rules)
+    // Map user's 5 activity levels to 2 Admin categories (Normal/Athlete)
+    let mappedActivity = profile.activityLevel;
+    if (["SEDENTARY", "LIGHT", "MODERATE"].includes(profile.activityLevel)) {
+      mappedActivity = "MODERATE"; // "عادي"
+    } else if (["ACTIVE", "VERY_ACTIVE"].includes(profile.activityLevel)) {
+      mappedActivity = "ACTIVE"; // "رياضي"
+    }
+
     const rule = await prisma.nutritionalRule.findUnique({
       where: {
         gender_activityLevel_goal: {
           gender: profile.gender,
-          activityLevel: profile.activityLevel,
+          activityLevel: mappedActivity,
           goal: profile.goal
         }
       }
