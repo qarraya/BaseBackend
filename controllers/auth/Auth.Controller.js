@@ -75,9 +75,9 @@ export const signUp = async (req, res) => {
           isVerified: true,
           isSubscribed: false,
           subscriptionEndDate: null,
-          freePlansCount: 1, // Give 1 free plan generation instead of full subscription
-          inTrial: false,
-          trialStartDate: null,
+          freePlansCount: 1,
+          inTrial: true,
+          trialStartDate: new Date(),
           trialDaysRemaining: 30,
         },
       });
@@ -317,7 +317,17 @@ export const logIn = async (req, res) => {
         createdAt: user.createdAt,
         profile: user.profile,
         accessToken: accessToken,
-        subscription: await getSubscriptionStatusForClient(user.id),
+        subscription: await (async () => {
+          const status = await getSubscriptionStatusForClient(user.id);
+          if (!status.inTrial && !user.trialStartDate && !user.isSubscribed) {
+            const updated = await prisma.user.update({
+              where: { id: user.id },
+              data: { inTrial: true, trialStartDate: new Date(), trialDaysRemaining: 30 }
+            });
+            return await getSubscriptionStatusForClient(updated.id);
+          }
+          return status;
+        })(),
       },
     });
   } catch (error) {

@@ -19,12 +19,12 @@ const adminPublic = (a) => ({
 
 const signAdminToken = (admin) => {
   return jwt.sign(
-    { 
-      id: admin.id, 
-      username: admin.username, 
-      name: admin.name, 
+    {
+      id: admin.id,
+      username: admin.username,
+      name: admin.name,
       role: "admin",
-      tokenVersion: admin.tokenVersion || 0 
+      tokenVersion: admin.tokenVersion || 0
     },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
@@ -37,29 +37,29 @@ export const adminLogin = async (req, res) => {
     if (!username || !password) return res.status(400).json({ message: "Missing credentials" });
 
     const admin = await prisma.admin.findUnique({ where: { username: username.trim() } });
-    
+
     if (!admin || !(await bcrypt.compare(password, admin.password))) {
       return res.status(401).json({ message: "Invalid username or password." });
     }
 
     if (admin.isActive === false) {
-        return res.status(403).json({ message: "Account is inactive." });
+      return res.status(403).json({ message: "Account is inactive." });
     }
 
-    await prisma.admin.update({ 
-      where: { id: admin.id }, 
-      data: { lastLogin: new Date() } 
+    await prisma.admin.update({
+      where: { id: admin.id },
+      data: { lastLogin: new Date() }
     });
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       success: true,
-      message: "Login successful.", 
-      token: signAdminToken(admin), 
-      admin: adminPublic(admin) 
+      message: "Login successful.",
+      token: signAdminToken(admin),
+      admin: adminPublic(admin)
     });
-  } catch (error) { 
+  } catch (error) {
     console.error("Login Error:", error);
-    res.status(500).json({ message: "Server error" }); 
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -67,8 +67,8 @@ export const adminRegister = async (req, res) => {
   try {
     const { name, username, password, email } = req.body;
     const hashed = await bcrypt.hash(password, 10);
-    const admin = await prisma.admin.create({ 
-      data: { name: name.trim(), username: username.trim(), email: email?.trim(), password: hashed, lastLogin: new Date() } 
+    const admin = await prisma.admin.create({
+      data: { name: name.trim(), username: username.trim(), email: email?.trim(), password: hashed, lastLogin: new Date() }
     });
     return res.status(201).json({ success: true, message: "Admin registered.", token: signAdminToken(admin), admin: adminPublic(admin) });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
@@ -105,15 +105,15 @@ export const logoutAllSessions = async (req, res) => {
 };
 
 export const toggleAdminActiveStatus = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const admin = await prisma.admin.findUnique({ where: { id } });
-        const updated = await prisma.admin.update({
-            where: { id },
-            data: { isActive: !admin.isActive, tokenVersion: { increment: 1 } }
-        });
-        res.status(200).json({ success: true, message: `Admin ${updated.isActive ? 'activated' : 'deactivated'}.`, isActive: updated.isActive });
-    } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
+  try {
+    const { id } = req.params;
+    const admin = await prisma.admin.findUnique({ where: { id } });
+    const updated = await prisma.admin.update({
+      where: { id },
+      data: { isActive: !admin.isActive, tokenVersion: { increment: 1 } }
+    });
+    res.status(200).json({ success: true, message: `Admin ${updated.isActive ? 'activated' : 'deactivated'}.`, isActive: updated.isActive });
+  } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
 };
 
 /**
