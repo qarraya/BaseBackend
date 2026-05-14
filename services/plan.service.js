@@ -262,15 +262,18 @@ export async function getUserPlanOrGenerate(userId) {
 
   // Check if the plan is valid, has meals, and covers "Today" as a DayNumber
   let isPlanValid = false;
+  let currentDayDiff = 1;
+
   if (plan && new Date(plan.endDate) >= today && plan.meals && plan.meals.length > 0) {
-    const dayDiff = Math.floor((today - new Date(plan.startDate)) / (1000 * 60 * 60 * 24)) + 1;
-    const hasMealsForToday = plan.meals.some(m => m.dayNumber === dayDiff);
+    currentDayDiff = Math.floor((today - new Date(plan.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+    const hasMealsForToday = plan.meals.some(m => m.dayNumber === currentDayDiff);
     if (hasMealsForToday) {
       isPlanValid = true;
     }
   }
 
   if (isPlanValid) {
+    plan.meals = plan.meals.filter(m => m.dayNumber === currentDayDiff);
     return withPlanPageBanner(mapPlanMealsForClient(plan));
   }
 
@@ -292,6 +295,7 @@ export async function getUserPlanOrGenerate(userId) {
       );
     }
 
+    plan.meals = plan.meals.filter(m => m.dayNumber === 1);
     return withPlanPageBanner(mapPlanMealsForClient(plan));
   });
 }
