@@ -264,11 +264,21 @@ export async function getUserPlanOrGenerate(userId) {
   let isPlanValid = false;
   let currentDayDiff = 1;
 
-  if (plan && new Date(plan.endDate) >= today && plan.meals && plan.meals.length > 0) {
-    currentDayDiff = Math.floor((today - new Date(plan.startDate)) / (1000 * 60 * 60 * 24)) + 1;
-    const hasMealsForToday = plan.meals.some(m => m.dayNumber === currentDayDiff);
-    if (hasMealsForToday) {
-      isPlanValid = true;
+  if (plan) {
+    const endDateNormalized = new Date(plan.endDate);
+    endDateNormalized.setHours(23, 59, 59, 999);
+
+    if (endDateNormalized >= today && plan.meals && plan.meals.length > 0) {
+      const startDateNormalized = new Date(plan.startDate);
+      startDateNormalized.setHours(0, 0, 0, 0);
+
+      const diffTime = today.getTime() - startDateNormalized.getTime();
+      currentDayDiff = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+      const hasMealsForToday = plan.meals.some(m => m.dayNumber === currentDayDiff);
+      if (hasMealsForToday) {
+        isPlanValid = true;
+      }
     }
   }
 
