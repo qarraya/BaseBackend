@@ -38,7 +38,7 @@ export const getMealById = async (req, res) => {
 /* ------------------ Create Meal ------------------ */
 export const createMeal = async (req, res) => {
   try {
-    const { name, portion, proteins, fats, carbs, ingredients, time, chronicDiseasesIds } = req.body;
+    const { name, portion, proteins, fats, carbs, ingredients, imageUrl, time, chronicDiseasesIds } = req.body;
 
     if (!name || !time) {
       return res.status(400).json({ message: "Name and time are required." });
@@ -60,6 +60,7 @@ export const createMeal = async (req, res) => {
         fats: fats !== undefined ? Number(fats) : null,
         carbs: carbs !== undefined ? Number(carbs) : null,
         ingredients: Array.isArray(ingredients) ? ingredients : [],
+        imageUrl: imageUrl ?? null,
         time, // MUST match MealTime enum
         chromicDiseases:
           Array.isArray(chronicDiseasesIds) && chronicDiseasesIds.length > 0
@@ -84,7 +85,7 @@ export const createMeal = async (req, res) => {
 export const updateMeal = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, portion, proteins, fats, carbs, ingredients, time, chronicDiseasesIds } = req.body;
+    const { name, portion, proteins, fats, carbs, ingredients, imageUrl, time, chronicDiseasesIds } = req.body;
 
     const existingMeal = await prisma.meal.findUnique({ where: { id } });
 
@@ -114,6 +115,7 @@ export const updateMeal = async (req, res) => {
         fats: fats !== undefined ? Number(fats) : existingMeal.fats,
         carbs: carbs !== undefined ? Number(carbs) : existingMeal.carbs,
         ingredients: Array.isArray(ingredients) ? ingredients : existingMeal.ingredients,
+        imageUrl: imageUrl !== undefined ? imageUrl : existingMeal.imageUrl,
         time: time ?? existingMeal.time,
         chromicDiseases:
           Array.isArray(chronicDiseasesIds)
