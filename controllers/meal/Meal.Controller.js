@@ -88,10 +88,18 @@ export const createMeal = async (req, res) => {
       return res.status(400).json({ message: "Meal with this name already exists." });
     }
 
-    let imageUrl = bodyImageUrl || null;
+    let imageUrl = bodyImageUrl || req.body.imageUrl || null;
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.path, "meals");
       imageUrl = uploadResult.secure_url;
+    }
+
+    // fallback check if imageUrl is somehow nested or missed
+    if (!imageUrl && req.body.data) {
+      try {
+        const parsedData = JSON.parse(req.body.data);
+        imageUrl = parsedData.imageUrl;
+      } catch (e) { }
     }
 
     // Helper functions for safety
