@@ -1,28 +1,26 @@
-import prisma from "../../lib/prisma.js";
+import { PrismaClient } from "@prisma/client";
 import { uploadToCloudinary } from "../../utils/cloudinary.js";
+
+// تعريف مباشر هنا لضمان عدم حدوث خطأ في الاستيراد
+const prisma = new PrismaClient();
 
 /* ------------------ Get All Meals ------------------ */
 export const getAllMeals = async (req, res) => {
   try {
     const meals = await prisma.meal.findMany({ include: { chromicDiseases: true } });
-    const timeMap = { BREAKFAST: "Breakfast", LUNCH: "Lunch", DINNER: "Dinner", SNACK: "Snack" };
-    res.status(200).json(meals.map(m => ({ ...m, displayTime: timeMap[m.time] || m.time })));
+    res.status(200).json(meals);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error fetching meals." });
+    res.status(500).json({ message: "Error", error: error.message });
   }
 };
 
 /* ------------------ Get Meal By ID ------------------ */
 export const getMealById = async (req, res) => {
   try {
-    const meal = await prisma.meal.findUnique({ where: { id: req.params.id }, include: { chromicDiseases: true } });
-    if (!meal) return res.status(404).json({ message: "Meal not found." });
-    const timeMap = { BREAKFAST: "Breakfast", LUNCH: "Lunch", DINNER: "Dinner", SNACK: "Snack" };
-    res.status(200).json({ ...meal, displayTime: timeMap[meal.time] || meal.time });
+    const meal = await prisma.meal.findUnique({ where: { id: req.params.id } });
+    res.status(200).json(meal);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error." });
+    res.status(500).json({ message: "Error" });
   }
 };
 
@@ -34,11 +32,7 @@ export const createMeal = async (req, res) => {
 
     let imageUrl = bodyImageUrl || null;
     if (req.file) {
-      try {
-        imageUrl = await uploadToCloudinary(req.file.buffer);
-      } catch (err) {
-        console.error("Cloudinary error:", err);
-      }
+      try { imageUrl = await uploadToCloudinary(req.file.buffer); } catch (e) { }
     }
 
     const parseNum = (v) => (v !== undefined && v !== "" ? Number(v) : 0);
@@ -64,13 +58,12 @@ export const createMeal = async (req, res) => {
             chronicDiseases: { connect: { id: parseInt(id) } }
           }))
         }
-      },
-      include: { chromicDiseases: true }
+      }
     });
     res.status(201).json(meal);
   } catch (error) {
-    console.error("Create Meal Error:", error);
-    res.status(500).json({ message: "Failed to create meal.", details: error.message });
+    console.error(error);
+    res.status(500).json({ message: "Failed", error: error.message });
   }
 };
 
@@ -78,52 +71,34 @@ export const createMeal = async (req, res) => {
 export const updateMeal = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, calories, portion, proteins, fats, carbs, ingredients, time, chronicDiseases, imageUrl: bodyImageUrl } = req.body;
+    const { name, calories, imageUrl: bodyImageUrl } = req.body;
     const existing = await prisma.meal.findUnique({ where: { id } });
-    if (!existing) return res.status(404).json({ message: "Not found." });
+    if (!existing) return res.status(404).json({ message: "Not found" });
 
     let imageUrl = bodyImageUrl || existing.imageUrl;
     if (req.file) {
       try { imageUrl = await uploadToCloudinary(req.file.buffer); } catch (e) { }
     }
 
-    const parseNum = (v, fb) => (v !== undefined && v !== "" ? Number(v) : fb);
-    const parseJSON = (v, fb) => {
-      if (v === undefined) return fb;
-      if (typeof v === "string") { try { return JSON.parse(v); } catch (e) { return fb; } }
-      return Array.isArray(v) ? v : fb;
-    };
-
     const updated = await prisma.meal.update({
       where: { id },
       data: {
         name: name || existing.name,
         calories: calories ? parseInt(calories) : existing.calories,
-        portion: portion !== undefined ? portion : existing.portion,
-        proteins: parseNum(proteins, existing.proteins),
-        fats: parseNum(fats, existing.fats),
-        carbs: parseNum(carbs, existing.carbs),
-        ingredients: parseJSON(ingredients, existing.ingredients),
         imageUrl,
-        time: time || existing.time,
-        chromicDiseases: chronicDiseases ? {
-          deleteMany: {},
-          create: parseJSON(chronicDiseases, []).map(id => ({
-            chronicDiseases: { connect: { id: parseInt(id) } }
-          }))
-        } : undefined
       }
     });
     res.status(200).json(updated);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Update failed." });
+    res.status(500).json({ message: "Update failed" });
   }
 };
 
 export const deleteMeal = async (req, res) => {
-  await prisma.meal.delete({ where: { id: req.params.id } });
-  res.status(200).json({ message: "Deleted." });
+  try {
+    await prisma.meal.delete({ where: { id: req.params.id } });
+    res.status(200).json({ message: "Deleted" });
+  } catch (e) { res.status(500).json({ message: "Error" }); }
 };
 
 export const seedMealsFromAPI = () => { };
