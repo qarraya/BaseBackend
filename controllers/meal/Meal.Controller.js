@@ -111,7 +111,7 @@ export const createMeal = async (req, res) => {
       return Array.isArray(val) ? val : [];
     };
 
-    console.log("Creating meal with data:", { name, calories, imageUrl, time });
+    console.log("DEBUG: Attempting Prisma Create with minimal data");
 
     try {
       const meal = await prisma.meal.create({
@@ -125,25 +125,25 @@ export const createMeal = async (req, res) => {
           ingredients: parseJSON(ingredients),
           imageUrl,
           time,
+          // Commenting out relations to isolate the 500 error
+          /*
           chromicDiseases: {
             create: parseJSON(chronicDiseases).map((id) => ({
               chronicDiseases: { connect: { id: parseInt(id) } },
             })),
           },
+          */
         },
-        include: { chromicDiseases: true },
       });
+      console.log("DEBUG: Meal created successfully");
       res.status(201).json(meal);
     } catch (prismaError) {
-      console.error("Prisma Create Error:", prismaError);
-      res.status(400).json({
-        message: "Failed to create meal in database.",
-        error: prismaError.message
-      });
+      console.error("Prisma Detail Error:", prismaError);
+      res.status(400).json({ message: "Prisma Error", details: prismaError.message });
     }
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal server error." });
+    console.error("GLOBAL ERROR:", error);
+    res.status(500).json({ message: "Server Error", details: error.message });
   }
 };
 
