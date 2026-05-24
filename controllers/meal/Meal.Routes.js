@@ -15,7 +15,6 @@ const router = express.Router();
 
 // 1. المسارات العامة
 router.get("/", getAllMeals);
-router.get("/test", (req, res) => res.status(200).json({ status: "ok", message: "Meal Routes are active" }));
 router.get("/:id", getMealById);
 
 // 2. مسارات الأدمن (محمية)
