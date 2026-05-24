@@ -177,8 +177,6 @@ model Meal {
   planMeals       PlanMeal[]
 }
 
-
-
 ////////////////////////////
 /// MEAL ↔ ChronicDiseases (M-M)
 ////////////////////////////
@@ -267,4 +265,18 @@ model Question {
   status    QuestionStatus @default(PENDING)
   isRead    Boolean        @default(false)
   createdAt DateTime       @default(now())
+}
+
+model NutritionalRule {
+  id            Int               @id @default(autoincrement())
+  gender        Gender
+  activityLevel ActivityLevelEnum
+  goal          Goal
+  calories      Int
+  proteins      Float
+  fats          Float
+  carbs         Float
+  updatedAt     DateTime          @default(now()) @updatedAt
+
+  @@unique([gender, activityLevel, goal])
 }

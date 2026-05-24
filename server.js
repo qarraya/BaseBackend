@@ -18,6 +18,7 @@ import subscriptionRoutes from "./controllers/subscription/Subscription.Routes.j
 import progressRoutes from "./controllers/progress/Progress.Routes.js";
 import adminRoutes from "./controllers/admin/Admin.Routes.js";
 import cronRoutes from "./routes/cron.routes.js";
+import questionsRoutes from "./controllers/questions/Questions.Routes.js";
 
 // Initialize scheduled background jobs (No longer using node-cron, migrated to Vercel Cron)
 // import "./jobs/cronJobs.js";
@@ -33,7 +34,7 @@ const whitelist = [
   process.env.FRONTEND_URL,
   "http://localhost:5173",
   "http://localhost:3000",
-
+  "*"
 ];
 
 
@@ -76,6 +77,7 @@ app.use(express.static("client"));
 app.use("/api/auth", authRoutes);
 app.use("/api/diseases", diseasesRoutes);
 app.use("/api/meal", mealRoutes);
+app.use("/api/meals", mealRoutes); // دعم صيغة الجمع لتجنب أخطاء الفرونت-إند
 app.use("/api/users", usersRoutes);
 app.use("/api/plan", planRoutes);
 app.use("/api/profile", profileRoutes);
@@ -84,8 +86,9 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/progress", progressRoutes);
-app.use("/api/admin", adminRoutes);
+app.use("/api/system-manager-hq8", adminRoutes);
 app.use("/api/cron", cronRoutes);
+app.use("/api/questions", questionsRoutes);
 
 /**
  * Plan generation (entitlement + atomic reservation in services).

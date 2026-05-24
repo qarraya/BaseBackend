@@ -75,9 +75,9 @@ export const signUp = async (req, res) => {
           isVerified: true,
           isSubscribed: false,
           subscriptionEndDate: null,
-          freePlansCount: 1, // Give 1 free plan generation instead of full subscription
-          inTrial: false,
-          trialStartDate: null,
+          freePlansCount: 1,
+          inTrial: true,
+          trialStartDate: new Date(),
           trialDaysRemaining: 30,
         },
       });
@@ -197,7 +197,59 @@ export const logIn = async (req, res) => {
       });
     }
 
-    /* ------------------ Find User ------------------ */
+    /* ------------------ 1. Check if it is an Admin ------------------ */
+    const admin = await prisma.admin.findFirst({
+      where: {
+        OR: [
+          { username: { equals: username, mode: "insensitive" } },
+          { email: { equals: username, mode: "insensitive" } },
+        ],
+      },
+    });
+
+    if (admin && admin.isActive) {
+      const isMatch = await bcrypt.compare(password, admin.password);
+      if (isMatch) {
+        // Update last login
+        await prisma.admin.update({
+          where: { id: admin.id },
+          data: { lastLogin: new Date() },
+        });
+
+        const accessToken = jwt.sign(
+          {
+            id: admin.id,
+            email: admin.email,
+            username: admin.username,
+            role: "admin",
+            tokenVersion: admin.tokenVersion,
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: "7d" }
+        );
+
+        res.cookie("auth_token", accessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        return res.status(200).json({
+          message: "Login successful (Admin).",
+          role: "admin",
+          token: accessToken,
+          admin: {
+            id: admin.id,
+            username: admin.username,
+            name: admin.name,
+            email: admin.email,
+          },
+        });
+      }
+    }
+
+    /* ------------------ 2. Fallback to User ------------------ */
     const user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -223,8 +275,6 @@ export const logIn = async (req, res) => {
         message: "User not found.",
       });
     }
-    console.log("Entered password:", password);
-    console.log("Stored password:", user.password);
 
     /* ------------------ Compare Password ------------------ */
     const isMatch = await bcrypt.compare(password, user.password);
@@ -258,6 +308,7 @@ export const logIn = async (req, res) => {
     /* ------------------ Success Response ------------------ */
     return res.status(200).json({
       message: "Login successful.",
+      role: "user",
       user: {
         id: user.id,
         username: user.username,
@@ -266,7 +317,17 @@ export const logIn = async (req, res) => {
         createdAt: user.createdAt,
         profile: user.profile,
         accessToken: accessToken,
-        subscription: await getSubscriptionStatusForClient(user.id),
+        subscription: await (async () => {
+          const status = await getSubscriptionStatusForClient(user.id);
+          if (!status.inTrial && !user.trialStartDate && !user.isSubscribed) {
+            const updated = await prisma.user.update({
+              where: { id: user.id },
+              data: { inTrial: true, trialStartDate: new Date(), trialDaysRemaining: 30 }
+            });
+            return await getSubscriptionStatusForClient(updated.id);
+          }
+          return status;
+        })(),
       },
     });
   } catch (error) {

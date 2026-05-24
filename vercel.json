@@ -2,23 +2,23 @@
   "crons": [
     {
       "path": "/api/cron/breakfast",
-      "schedule": "0 8 * * *"
+      "schedule": "0 5 * * *"
     },
     {
       "path": "/api/cron/lunch",
-      "schedule": "0 13 * * *"
+      "schedule": "0 10 * * *"
     },
     {
       "path": "/api/cron/water",
-      "schedule": "45 13 * * *"
+      "schedule": "45 10 * * *"
     },
     {
       "path": "/api/cron/snack",
-      "schedule": "0 16 * * *"
+      "schedule": "0 13 * * *"
     },
     {
       "path": "/api/cron/dinner",
-      "schedule": "0 19 * * *"
+      "schedule": "0 16 * * *"
     },
     {
       "path": "/api/cron/subscriptions/expired",

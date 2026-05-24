@@ -22,7 +22,7 @@ import { verifyAdmin } from "../../middleware/verifyAdmin.js";
 const router = express.Router();
 
 // Auth & Comprehensive Account Settings
-router.post("/login", adminLogin);
+router.post("/auth/login", adminLogin);
 router.post("/register", adminRegister);
 router.put("/profile/:id", verifyAdmin, updateAdminProfile);
 

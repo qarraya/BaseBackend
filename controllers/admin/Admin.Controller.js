@@ -19,12 +19,12 @@ const adminPublic = (a) => ({
 
 const signAdminToken = (admin) => {
   return jwt.sign(
-    { 
-      id: admin.id, 
-      username: admin.username, 
-      name: admin.name, 
+    {
+      id: admin.id,
+      username: admin.username,
+      name: admin.name,
       role: "admin",
-      tokenVersion: admin.tokenVersion || 0 
+      tokenVersion: admin.tokenVersion || 0
     },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
@@ -37,29 +37,29 @@ export const adminLogin = async (req, res) => {
     if (!username || !password) return res.status(400).json({ message: "Missing credentials" });
 
     const admin = await prisma.admin.findUnique({ where: { username: username.trim() } });
-    
+
     if (!admin || !(await bcrypt.compare(password, admin.password))) {
       return res.status(401).json({ message: "Invalid username or password." });
     }
 
     if (admin.isActive === false) {
-        return res.status(403).json({ message: "Account is inactive." });
+      return res.status(403).json({ message: "Account is inactive." });
     }
 
-    await prisma.admin.update({ 
-      where: { id: admin.id }, 
-      data: { lastLogin: new Date() } 
+    await prisma.admin.update({
+      where: { id: admin.id },
+      data: { lastLogin: new Date() }
     });
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       success: true,
-      message: "Login successful.", 
-      token: signAdminToken(admin), 
-      admin: adminPublic(admin) 
+      message: "Login successful.",
+      token: signAdminToken(admin),
+      admin: adminPublic(admin)
     });
-  } catch (error) { 
+  } catch (error) {
     console.error("Login Error:", error);
-    res.status(500).json({ message: "Server error" }); 
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -67,8 +67,8 @@ export const adminRegister = async (req, res) => {
   try {
     const { name, username, password, email } = req.body;
     const hashed = await bcrypt.hash(password, 10);
-    const admin = await prisma.admin.create({ 
-      data: { name: name.trim(), username: username.trim(), email: email?.trim(), password: hashed, lastLogin: new Date() } 
+    const admin = await prisma.admin.create({
+      data: { name: name.trim(), username: username.trim(), email: email?.trim(), password: hashed, lastLogin: new Date() }
     });
     return res.status(201).json({ success: true, message: "Admin registered.", token: signAdminToken(admin), admin: adminPublic(admin) });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
@@ -105,15 +105,15 @@ export const logoutAllSessions = async (req, res) => {
 };
 
 export const toggleAdminActiveStatus = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const admin = await prisma.admin.findUnique({ where: { id } });
-        const updated = await prisma.admin.update({
-            where: { id },
-            data: { isActive: !admin.isActive, tokenVersion: { increment: 1 } }
-        });
-        res.status(200).json({ success: true, message: `Admin ${updated.isActive ? 'activated' : 'deactivated'}.`, isActive: updated.isActive });
-    } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
+  try {
+    const { id } = req.params;
+    const admin = await prisma.admin.findUnique({ where: { id } });
+    const updated = await prisma.admin.update({
+      where: { id },
+      data: { isActive: !admin.isActive, tokenVersion: { increment: 1 } }
+    });
+    res.status(200).json({ success: true, message: `Admin ${updated.isActive ? 'activated' : 'deactivated'}.`, isActive: updated.isActive });
+  } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
 };
 
 /**
@@ -129,11 +129,11 @@ export const getNutritionalRules = async (req, res) => {
 
 export const upsertNutritionalRule = async (req, res) => {
   try {
-    const { gender, activityLevel, goal, calories, protein, fats, carbs } = req.body;
+    const { gender, activityLevel, goal, calories, proteins, fats, carbs } = req.body;
     const rule = await prisma.nutritionalRule.upsert({
       where: { gender_activityLevel_goal: { gender, activityLevel, goal } },
-      update: { calories, protein, fats, carbs },
-      create: { gender, activityLevel, goal, calories, protein, fats, carbs }
+      update: { calories, proteins, fats, carbs },
+      create: { gender, activityLevel, goal, calories, proteins, fats, carbs }
     });
     res.status(200).json({ success: true, message: "Nutritional rule saved.", rule });
   } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
@@ -154,9 +154,46 @@ export const getAdminStats = async (req, res) => {
 
 export const listAllUsers = async (req, res) => {
   try {
-    const users = await prisma.user.findMany({ orderBy: { createdAt: "desc" }, select: { id: true, username: true, email: true, isSubscribed: true, subscriptionEndDate: true, createdAt: true } });
-    res.status(200).json({ success: true, users });
-  } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        isSubscribed: true,
+        subscriptionEndDate: true,
+        createdAt: true,
+        profile: {
+          select: {
+            currentWeight: true,
+            targetWeight: true,
+            goal: true,
+          }
+        },
+        plans: {
+          orderBy: { createdAt: "desc" },
+          take: 1, // جلب آخر خطة فقط
+          select: {
+            totalCalories: true,
+            startDate: true,
+            endDate: true,
+          }
+        }
+      }
+    });
+
+    // تنسيق البيانات لتسهيلها على الفرونت-إند
+    const formattedUsers = users.map(u => ({
+      ...u,
+      latestPlan: u.plans[0] || null,
+      plans: undefined // حذف المصفوفة القديمة
+    }));
+
+    res.status(200).json({ success: true, users: formattedUsers });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "فشل في جلب قائمة المستخدمين" });
+  }
 };
 
 export const toggleUserSubscription = async (req, res) => {
