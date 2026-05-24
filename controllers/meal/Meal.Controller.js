@@ -73,27 +73,17 @@ export const createMeal = async (req, res) => {
       return Array.isArray(val) ? val : [];
     };
 
+    /*
     const meal = await prisma.meal.create({
-      data: {
-        name,
-        calories: parseInt(calories) || 0,
-        portion: portion || null,
-        proteins: parseNum(proteins),
-        fats: parseNum(fats),
-        carbs: parseNum(carbs),
-        ingredients: parseJSON(ingredients),
-        imageUrl,
-        time,
-        chromicDiseases: {
-          create: parseJSON(chronicDiseases).map((id) => ({
-            chronicDiseases: { connect: { id: parseInt(id) } },
-          })),
-        },
-      },
-      include: { chromicDiseases: true },
+      ...
     });
+    */
 
-    res.status(201).json(meal);
+    return res.status(201).json({
+      success: true,
+      message: "Test Success! If you see this, the problem is Prisma/Database.",
+      receivedData: { name, imageUrl }
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error.", error: error.message });
