@@ -1,5 +1,5 @@
 import prisma from "../../lib/prisma.js";
-import { uploadToCloudinary } from "../../utils/cloudinary.js";
+import { uploadToCloudinary, uploadUrlToCloudinary } from "../../utils/cloudinary.js";
 
 export const getAllMeals = async (req, res) => {
   try {
@@ -27,9 +27,20 @@ export const createMeal = async (req, res) => {
   try {
     const { name, calories, portion, proteins, fats, carbs, ingredients, time, chronicDiseases, imageUrl: bodyImageUrl } = req.body;
 
-    let imageUrl = bodyImageUrl || null;
+    let imageUrl = null;
+
+    // الخيار الأول: رفع ملف صورة
     if (req.file) {
       imageUrl = await uploadToCloudinary(req.file.buffer);
+    }
+    // الخيار الثاني: رفع من رابط (سيتم تخزينه في Cloudinary الآن)
+    else if (bodyImageUrl) {
+      try {
+        imageUrl = await uploadUrlToCloudinary(bodyImageUrl);
+      } catch (e) {
+        console.error("Auto mirror to Cloudinary failed:", e);
+        imageUrl = bodyImageUrl;
+      }
     }
 
     const parseNum = (v) => (v !== undefined && v !== "" ? Number(v) : 0);
@@ -73,9 +84,16 @@ export const updateMeal = async (req, res) => {
     const existing = await prisma.meal.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ message: "Meal not found." });
 
-    let imageUrl = bodyImageUrl || existing.imageUrl;
+    let imageUrl = existing.imageUrl;
+
     if (req.file) {
       imageUrl = await uploadToCloudinary(req.file.buffer);
+    } else if (bodyImageUrl && bodyImageUrl !== existing.imageUrl) {
+      try {
+        imageUrl = await uploadUrlToCloudinary(bodyImageUrl);
+      } catch (e) {
+        imageUrl = bodyImageUrl;
+      }
     }
 
     const parseNum = (v, fallback) => (v !== undefined && v !== "" ? Number(v) : fallback);

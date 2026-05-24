@@ -6,6 +6,7 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// دالة لدعم رفع البفر (الملفات)
 export const uploadToCloudinary = (fileBuffer) => {
     return new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
@@ -17,6 +18,16 @@ export const uploadToCloudinary = (fileBuffer) => {
         );
         uploadStream.end(fileBuffer);
     });
+};
+
+// دالة لدعم رفع الروابط (URLs)
+export const uploadUrlToCloudinary = async (url) => {
+    try {
+        const result = await cloudinary.uploader.upload(url, { folder: "meals" });
+        return result.secure_url;
+    } catch (error) {
+        throw error;
+    }
 };
 
 export default cloudinary;
