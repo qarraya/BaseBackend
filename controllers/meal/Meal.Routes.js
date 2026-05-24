@@ -8,19 +8,14 @@ import {
   seedMealsFromAPI,
 } from "./Meal.Controller.js";
 
-import { verifyAdmin } from "../../middleware/verifyAdmin.js";
-import upload from "../../middleware/upload.js";
-
 const router = express.Router();
 
-// 1. المسارات العامة
+// مسارات بدوووووووووون أي ميدلوير أو استيراد خارجي
 router.get("/", getAllMeals);
+router.get("/test", (req, res) => res.json({ message: "Test OK" }));
 router.get("/:id", getMealById);
-
-// 2. مسارات الأدمن (محمية)
-router.get("/seed", verifyAdmin, seedMealsFromAPI); // أعدنا الحماية هنا
-router.post("/", verifyAdmin, upload.single("image"), createMeal);
-router.put("/:id", verifyAdmin, upload.single("image"), updateMeal);
-router.delete("/:id", verifyAdmin, deleteMeal);
+router.post("/", createMeal);
+router.put("/:id", updateMeal);
+router.delete("/:id", deleteMeal);
 
 export default router;
