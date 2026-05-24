@@ -75,7 +75,6 @@ export const createMeal = async (req, res) => {
       ingredients,
       time,
       chronicDiseases,
-      imageUrl: bodyImageUrl,
     } = req.body;
 
     if (!name || !time) {
@@ -88,17 +87,12 @@ export const createMeal = async (req, res) => {
       return res.status(400).json({ message: "Meal with this name already exists." });
     }
 
-    // Force capture imageUrl from any possible source in req.body
-    let imageUrl = req.body.imageUrl || req.body.imageURL || req.body.image_url || null;
+    // Capture image URL
+    let imageUrl = req.body.imageUrl || null;
 
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.path, "meals");
       imageUrl = uploadResult.secure_url;
-    }
-
-    // Secondary fallback
-    if (!imageUrl && req.body.bodyImageUrl) {
-      imageUrl = req.body.bodyImageUrl;
     }
 
     // Helper functions for safety
@@ -154,7 +148,6 @@ export const updateMeal = async (req, res) => {
       ingredients,
       time,
       chronicDiseases,
-      imageUrl: bodyImageUrl,
     } = req.body;
 
     console.log(`Attempting to update meal: ${cleanId}`);
@@ -165,16 +158,12 @@ export const updateMeal = async (req, res) => {
       return res.status(404).json({ message: "Meal not found." });
     }
 
-    // Force capture imageUrl
-    let imageUrl = req.body.imageUrl || req.body.imageURL || req.body.image_url || existingMeal.imageUrl;
+    // Capture image URL
+    let imageUrl = req.body.imageUrl || existingMeal.imageUrl;
 
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.path, "meals");
       imageUrl = uploadResult.secure_url;
-    }
-
-    if (!imageUrl && req.body.bodyImageUrl) {
-      imageUrl = req.body.bodyImageUrl;
     }
 
     // Helper functions for safety
