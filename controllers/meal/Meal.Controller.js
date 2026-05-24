@@ -75,6 +75,7 @@ export const createMeal = async (req, res) => {
       ingredients,
       time,
       chronicDiseases,
+      imageUrl: bodyImageUrl,
     } = req.body;
 
     if (!name || !time) {
@@ -87,7 +88,7 @@ export const createMeal = async (req, res) => {
       return res.status(400).json({ message: "Meal with this name already exists." });
     }
 
-    let imageUrl = req.body.imageUrl || null;
+    let imageUrl = bodyImageUrl || null;
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.path, "meals");
       imageUrl = uploadResult.secure_url;
@@ -146,6 +147,7 @@ export const updateMeal = async (req, res) => {
       ingredients,
       time,
       chronicDiseases,
+      imageUrl: bodyImageUrl,
     } = req.body;
 
     console.log(`Attempting to update meal: ${cleanId}`);
@@ -156,7 +158,7 @@ export const updateMeal = async (req, res) => {
       return res.status(404).json({ message: "Meal not found." });
     }
 
-    let imageUrl = req.body.imageUrl || existingMeal.imageUrl;
+    let imageUrl = bodyImageUrl || existingMeal.imageUrl;
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.path, "meals");
       imageUrl = uploadResult.secure_url;
