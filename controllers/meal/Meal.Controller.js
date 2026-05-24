@@ -88,18 +88,17 @@ export const createMeal = async (req, res) => {
       return res.status(400).json({ message: "Meal with this name already exists." });
     }
 
-    let imageUrl = bodyImageUrl || req.body.imageUrl || null;
+    // Force capture imageUrl from any possible source in req.body
+    let imageUrl = req.body.imageUrl || req.body.imageURL || req.body.image_url || null;
+
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.path, "meals");
       imageUrl = uploadResult.secure_url;
     }
 
-    // fallback check if imageUrl is somehow nested or missed
-    if (!imageUrl && req.body.data) {
-      try {
-        const parsedData = JSON.parse(req.body.data);
-        imageUrl = parsedData.imageUrl;
-      } catch (e) { }
+    // Secondary fallback
+    if (!imageUrl && req.body.bodyImageUrl) {
+      imageUrl = req.body.bodyImageUrl;
     }
 
     // Helper functions for safety
@@ -166,10 +165,16 @@ export const updateMeal = async (req, res) => {
       return res.status(404).json({ message: "Meal not found." });
     }
 
-    let imageUrl = bodyImageUrl || existingMeal.imageUrl;
+    // Force capture imageUrl
+    let imageUrl = req.body.imageUrl || req.body.imageURL || req.body.image_url || existingMeal.imageUrl;
+
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.path, "meals");
       imageUrl = uploadResult.secure_url;
+    }
+
+    if (!imageUrl && req.body.bodyImageUrl) {
+      imageUrl = req.body.bodyImageUrl;
     }
 
     // Helper functions for safety
