@@ -5,19 +5,23 @@ import {
   createMeal,
   updateMeal,
   deleteMeal,
-} from "./Meal.Controller.js"; // هنا الملف اسمو صح
+  seedMealsFromAPI,
+} from "./Meal.Controller.js";
 
 import { verifyAdmin } from "../../middleware/verifyAdmin.js";
+import upload from "../../middleware/upload.js";
 
 const router = express.Router();
 
-// كل الroutes الخاصة بالوجبات
-router.get("/", getAllMeals);          // جلب كل الوجبات (متاح للجميع)
-router.get("/:id", getMealById);       // جلب وجبة محددة (متاح للجميع)
+// 1. المسارات العامة
+router.get("/", getAllMeals);
+router.get("/test", (req, res) => res.status(200).json({ status: "ok", message: "Meal Routes are active" }));
+router.get("/:id", getMealById);
 
-// العمليات التالية مسموحة للأدمن فقط
-router.post("/", verifyAdmin, createMeal);          // إنشاء وجبة جديدة
-router.put("/:id", verifyAdmin, updateMeal);        // تعديل وجبة موجودة
-router.delete("/:id", verifyAdmin, deleteMeal);     // حذف وجبة
+// 2. مسارات الأدمن (محمية)
+router.get("/seed", verifyAdmin, seedMealsFromAPI); // أعدنا الحماية هنا
+router.post("/", verifyAdmin, upload.single("image"), createMeal);
+router.put("/:id", verifyAdmin, upload.single("image"), updateMeal);
+router.delete("/:id", verifyAdmin, deleteMeal);
 
 export default router;
