@@ -111,27 +111,36 @@ export const createMeal = async (req, res) => {
       return Array.isArray(val) ? val : [];
     };
 
-    const meal = await prisma.meal.create({
-      data: {
-        name,
-        calories: parseInt(calories) || 0,
-        portion: portion || null,
-        proteins: parseNum(proteins),
-        fats: parseNum(fats),
-        carbs: parseNum(carbs),
-        ingredients: parseJSON(ingredients),
-        imageUrl,
-        time, // Must be BREAKFAST, LUNCH, DINNER, SNACK
-        chromicDiseases: {
-          create: parseJSON(chronicDiseases).map((id) => ({
-            chronicDiseases: { connect: { id: parseInt(id) } },
-          })),
-        },
-      },
-      include: { chromicDiseases: true },
-    });
+    console.log("Creating meal with data:", { name, calories, imageUrl, time });
 
-    res.status(201).json(meal);
+    try {
+      const meal = await prisma.meal.create({
+        data: {
+          name,
+          calories: parseInt(calories) || 0,
+          portion: portion || null,
+          proteins: parseNum(proteins),
+          fats: parseNum(fats),
+          carbs: parseNum(carbs),
+          ingredients: parseJSON(ingredients),
+          imageUrl,
+          time,
+          chromicDiseases: {
+            create: parseJSON(chronicDiseases).map((id) => ({
+              chronicDiseases: { connect: { id: parseInt(id) } },
+            })),
+          },
+        },
+        include: { chromicDiseases: true },
+      });
+      res.status(201).json(meal);
+    } catch (prismaError) {
+      console.error("Prisma Create Error:", prismaError);
+      res.status(400).json({
+        message: "Failed to create meal in database.",
+        error: prismaError.message
+      });
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error." });
