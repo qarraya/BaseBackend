@@ -1,9 +1,7 @@
 import prisma from "../../lib/prisma.js";
 import { kcalFromMacros } from "../../utils/macros.js";
-import cloudinary, { uploadToCloudinary } from "../../utils/cloudinary.js";
+import { uploadToCloudinary } from "../../utils/cloudinary.js";
 import { mealCategories } from "../../lib/mealCategories.js";
-
-/* ------------------ Get All Meals ------------------ */
 export const getAllMeals = async (req, res) => {
   try {
     const meals = await prisma.meal.findMany({
@@ -90,14 +88,12 @@ export const createMeal = async (req, res) => {
     // Capture image URL from body
     let imageUrl = req.body.imageUrl || null;
 
-    // If a file is uploaded, prioritize it
+    // If a file is uploaded, use it (and it will overwrite the body imageUrl if both present)
     if (req.file) {
       try {
-        const uploadResult = await uploadToCloudinary(req.file.buffer);
-        imageUrl = uploadResult; // uploadToCloudinary already returns the secure_url string
+        imageUrl = await uploadToCloudinary(req.file.buffer);
       } catch (uploadError) {
         console.error("Cloudinary Upload Error:", uploadError);
-        // Optionally fallback to body imageUrl if upload fails
       }
     }
 
@@ -173,15 +169,14 @@ export const updateMeal = async (req, res) => {
       return res.status(404).json({ message: "Meal not found." });
     }
 
-    // Capture image URL
+    // Capture image URL: prioritize body, then existing, then file
     let imageUrl = req.body.imageUrl || existingMeal.imageUrl;
 
     if (req.file) {
       try {
-        const uploadResult = await uploadToCloudinary(req.file.buffer);
-        imageUrl = uploadResult;
+        imageUrl = await uploadToCloudinary(req.file.buffer);
       } catch (uploadError) {
-        console.error("Cloudinary Update Upload Error:", uploadError);
+        console.error("Cloudinary Update Error:", uploadError);
       }
     }
 
