@@ -87,12 +87,18 @@ export const createMeal = async (req, res) => {
       return res.status(400).json({ message: "Meal with this name already exists." });
     }
 
-    // Capture image URL
+    // Capture image URL from body
     let imageUrl = req.body.imageUrl || null;
 
+    // If a file is uploaded, prioritize it
     if (req.file) {
-      const uploadResult = await uploadToCloudinary(req.file.path, "meals");
-      imageUrl = uploadResult.secure_url;
+      try {
+        const uploadResult = await uploadToCloudinary(req.file.buffer);
+        imageUrl = uploadResult; // uploadToCloudinary already returns the secure_url string
+      } catch (uploadError) {
+        console.error("Cloudinary Upload Error:", uploadError);
+        // Optionally fallback to body imageUrl if upload fails
+      }
     }
 
     // Helper functions for safety
@@ -162,8 +168,12 @@ export const updateMeal = async (req, res) => {
     let imageUrl = req.body.imageUrl || existingMeal.imageUrl;
 
     if (req.file) {
-      const uploadResult = await uploadToCloudinary(req.file.path, "meals");
-      imageUrl = uploadResult.secure_url;
+      try {
+        const uploadResult = await uploadToCloudinary(req.file.buffer);
+        imageUrl = uploadResult;
+      } catch (uploadError) {
+        console.error("Cloudinary Update Upload Error:", uploadError);
+      }
     }
 
     // Helper functions for safety
