@@ -122,9 +122,29 @@ export const toggleAdminActiveStatus = async (req, res) => {
 
 export const getNutritionalRules = async (req, res) => {
   try {
+    const { gender, activityLevel, goal } = req.query;
+
+    // If query params are provided, return a specific rule
+    if (gender && activityLevel && goal) {
+      const rule = await prisma.nutritionalRule.findUnique({
+        where: {
+          gender_activityLevel_goal: {
+            gender,
+            activityLevel,
+            goal
+          }
+        }
+      });
+      return res.status(200).json({ success: true, rule });
+    }
+
+    // Otherwise return all rules
     const rules = await prisma.nutritionalRule.findMany();
     res.status(200).json({ success: true, rules });
-  } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
+  } catch (error) {
+    console.error("Error fetching nutritional rules:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
 };
 
 export const upsertNutritionalRule = async (req, res) => {
