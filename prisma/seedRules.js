@@ -14,15 +14,15 @@ async function main() {
       for (const goal of goals) {
         // حساب قيم افتراضية معقولة (كقاعدة أساسية فقط)
         let calories = 2000;
-        
+
         // تعديل السعرات حسب الجنس
         if (gender === 'FEMALE') calories -= 300;
-        
+
         // تعديل السعرات حسب النشاط
         if (activity === 'SEDENTARY') calories -= 200;
         if (activity === 'ACTIVE') calories += 300;
         if (activity === 'VERY_ACTIVE') calories += 500;
-        
+
         // تعديل السعرات حسب الهدف
         if (goal === 'LOSE') calories -= 400;
         if (goal === 'GAIN') calories += 400;
