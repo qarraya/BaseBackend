@@ -7,7 +7,7 @@ import prisma from "../../lib/prisma.js";
 export const askQuestion = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { question, category } = req.body;
+    const { question } = req.body;
 
     if (!question) {
       return res.status(400).json({ success: false, message: "Question content is required" });
@@ -17,7 +17,6 @@ export const askQuestion = async (req, res) => {
       data: {
         userId,
         question: question.trim(),
-        category: category?.trim() || "عام",
         status: "PENDING"
       }
     });

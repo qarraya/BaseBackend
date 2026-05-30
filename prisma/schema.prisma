@@ -259,7 +259,6 @@ model Question {
   id        String         @id @default(uuid())
   userId    String
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category  String?        // e.g., "نصائح الرياضة"
   question  String
   answer    String?
   status    QuestionStatus @default(PENDING)
