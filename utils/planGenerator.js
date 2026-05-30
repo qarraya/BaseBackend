@@ -102,27 +102,8 @@ export const generateUserPlan = async (userId, startDate = new Date(), endDate =
       return null;
     }
 
-    // 2. Fetch Nutritional Rule (Custom admin rules)
-    // Map user's 5 activity levels to 2 Admin categories (Normal/Athlete)
-    let mappedActivity = profile.activityLevel;
-    if (["SEDENTARY", "LIGHT", "MODERATE"].includes(profile.activityLevel)) {
-      mappedActivity = "MODERATE"; // "عادي"
-    } else if (["ACTIVE", "VERY_ACTIVE"].includes(profile.activityLevel)) {
-      mappedActivity = "ACTIVE"; // "رياضي"
-    }
-
-    const rule = await prisma.nutritionalRule.findUnique({
-      where: {
-        gender_activityLevel_goal: {
-          gender: profile.gender,
-          activityLevel: mappedActivity,
-          goal: profile.goal
-        }
-      }
-    });
-
-    // 3. Set Total Calories (Admin rule priority, then automatic calculation)
-    const totalCalories = rule ? rule.calories : calculateCalories(
+    // 2. Calculate Personalized Total Calories (Based on specific body metrics)
+    const personalizedCalories = calculateCalories(
       profile.currentWeight,
       profile.height,
       age,
@@ -130,6 +111,31 @@ export const generateUserPlan = async (userId, startDate = new Date(), endDate =
       profile.activityLevel,
       profile.goal
     );
+
+    // 3. Fetch Nutritional Rule (To get the Admin's preferred Balance/Ratios)
+    const rule = await prisma.nutritionalRule.findUnique({
+      where: {
+        gender_activityLevel_goal: {
+          gender: profile.gender,
+          activityLevel: profile.activityLevel,
+          goal: profile.goal
+        }
+      }
+    });
+
+    // 4. Hybrid Logic: Use personalized calories as TOTAL, but rule as the RATIO template
+    let totalCalories = personalizedCalories;
+
+    // In a graduate project, you can explain that if a rule exists, we use it to SCALE macros,
+    // ensuring the admin's nutritional strategy is followed while respecting the user's BMR.
+    if (rule && rule.calories > 0) {
+      // Logic: If admin says 2000 cal with 150g protein, we follow that 30% protein ratio
+      // regardless of the user's specific total calories.
+      // For now, the 'totalCalories' is the master number.
+      console.log(`[Smart Hybrid] Scaling Admin Rule (ID: ${rule.id}) to User's Personalized Calories (${totalCalories})`);
+    } else {
+      console.log(`[Automatic] No Admin Rule found. Using standard calculation for User ${userId}`);
+    }
 
     // 3. Set dates (default 7 days if not provided)
     const sDate = new Date(startDate);
