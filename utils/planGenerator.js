@@ -77,13 +77,15 @@ export const calculateCalories = (weight, height, age, gender, activityLevel, go
  */
 export const generateUserPlan = async (userId, startDate = new Date(), endDate = null) => {
   try {
-    // 1. Fetch user profile with chronic diseases
+    // 1. Fetch user profile with chronic diseases (including names)
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
         profile: {
           include: {
-            chronicDiseases: true
+            chronicDiseases: {
+              include: { chronicDisease: true }
+            }
           }
         }
       }
@@ -102,19 +104,8 @@ export const generateUserPlan = async (userId, startDate = new Date(), endDate =
       return null;
     }
 
-    // 2. Fetch Nutritional Rule (Admin's preferred Balance/Ratios)
-    const rule = await prisma.nutritionalRule.findUnique({
-      where: {
-        gender_activityLevel_goal: {
-          gender: profile.gender,
-          activityLevel: profile.activityLevel,
-          goal: profile.goal
-        }
-      }
-    });
-
-    // 3. Set Total Calories (Always personalized based on body metrics)
-    const totalCalories = calculateCalories(
+    // 2. Set Total Calories (Personalized based on body metrics)
+    const baseCalories = calculateCalories(
       profile.currentWeight,
       profile.height,
       age,
@@ -122,6 +113,17 @@ export const generateUserPlan = async (userId, startDate = new Date(), endDate =
       profile.activityLevel,
       profile.goal
     );
+
+    // Concept: Medical Modifiers (Logic only, no DB change)
+    let totalCalories = baseCalories;
+    const userDiseases = profile.chronicDiseases.map(cd => cd.chronicDisease?.name);
+
+    if (userDiseases.includes("السكري")) {
+      totalCalories = Math.round(totalCalories * 0.95); // Example: 5% reduction for metabolic safety
+    }
+    if (userDiseases.includes("ارتفاع ضغط الدم")) {
+      totalCalories = Math.round(totalCalories * 0.98);
+    }
 
     // 3. Set dates (default 7 days if not provided)
     const sDate = new Date(startDate);

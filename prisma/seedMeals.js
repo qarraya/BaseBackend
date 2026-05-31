@@ -125,7 +125,7 @@ const mealCategories = {
         }
 
     ],
-LUNCH: [
+    LUNCH: [
         { name: "سلطة دجاج مشوي", calories: 344, portion: "300غ", fats: 20, proteins: 32, carbs: 9, ingredients: ["150غ صدر دجاج مشوي", "كوبين خس", "طماطم وخيار", "ملعقتين صلصة خل وزيت"], imageUrl: "https://images.unsplash.com/photo-1580013759032-c96505e24c1f?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8SGVhbHRoeSUyMGNoaWNrZW4lMjBzYWxhZCUyMGJvd2x8ZW58MHx8MHx8fDA%3D", incompatibleDiseases: [] },
         { name: "سلمون مشوي مع أرز بني", calories: 540, portion: "350غ", fats: 20, proteins: 40, carbs: 50, ingredients: ["150غ فيليه سلمون", "كوب أرز بني مسلوق", "نصف كوب خضار سوتيه"], imageUrl: "https://images.unsplash.com/photo-1726802225892-2f93903572f9?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8R3JpbGxlZCUyMHNhbG1vbiUyMHdpdGglMjBicm93biUyMHJpY2V8ZW58MHx8MHx8fDA%3D", incompatibleDiseases: [] },
         { name: "معكرونة قمح كامل بصلصة الطماطم", calories: 305, portion: "300غ", fats: 4.5, proteins: 12, carbs: 54, ingredients: ["كوب مكرونة مسلوقة", "نصف كوب صلصة طماطم طبيعية", "ملعقة جبن مبشور"], imageUrl: "https://images.unsplash.com/photo-1617474019977-0e105d1b430e?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8V2hvbGUlMjB3aGVhdCUyMHBhc3RhJTIwd2l0aCUyMHRvbWF0byUyMHNhdWNlfGVufDB8fDB8fHww", incompatibleDiseases: ["السكري"] },
