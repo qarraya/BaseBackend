@@ -38,15 +38,16 @@ const pickMealForDay = (meals, dayIndex, goal, userId, mealTime) => {
 };
 
 /**
- * Calculates daily calorie needs based on user profile.
+ * Calculates daily calorie needs based on user profile and applies medical adjustments.
  */
-export const calculateCalories = (weight, height, age, gender, activityLevel, goal) => {
+export const calculateCalories = (weight, height, age, gender, activityLevel, goal, diseases = []) => {
   let bmr;
 
   const g = String(gender).toUpperCase();
   const a = String(activityLevel).toUpperCase();
   const gl = String(goal).toUpperCase();
 
+  // 1. Base BMR Calculation
   if (g === "MALE") {
     bmr = 10 * weight + 6.25 * height - 5 * age + 5;
   } else {
@@ -62,11 +63,34 @@ export const calculateCalories = (weight, height, age, gender, activityLevel, go
   };
 
   const maintenanceCalories = bmr * (activityMultipliers[a] || 1.2);
-
   let calories = maintenanceCalories;
 
+  // 2. Goal Adjustment
   if (gl === "LOSE") calories = maintenanceCalories - 500;
   else if (gl === "GAIN") calories = maintenanceCalories + 500;
+
+  // 3. INTERNAL MEDICAL LOGIC (Behind the scenes)
+  // These adjustments are applied automatically based on the user's profile diseases
+  const diseaseNames = Array.isArray(diseases) ? diseases.map(d => d.name || d) : [];
+
+  if (diseaseNames.includes("السكري")) {
+    calories *= 0.95; // 5% reduction for metabolic safety
+  }
+  if (diseaseNames.includes("ارتفاع ضغط الدم")) {
+    calories *= 0.98; // 2% reduction
+  }
+  if (diseaseNames.includes("أمراض القلب")) {
+    calories *= 0.96; // 4% reduction
+  }
+  if (diseaseNames.includes("ارتفاع الكوليسترول")) {
+    calories *= 0.97; // 3% reduction
+  }
+  if (diseaseNames.includes("أمراض الكلى المزمنة")) {
+    calories *= 0.94; // 6% reduction (conservative)
+  }
+  if (diseaseNames.includes("القولون العصبي")) {
+    calories *= 0.99; // Minimal reduction, focus is on meal types
+  }
 
   return Math.round(calories);
 };
@@ -104,26 +128,17 @@ export const generateUserPlan = async (userId, startDate = new Date(), endDate =
       return null;
     }
 
-    // 2. Set Total Calories (Personalized based on body metrics)
-    const baseCalories = calculateCalories(
+    // 2. Set Total Calories (Personalized based on body metrics + Automatic Medical Logic)
+    const userDiseases = profile.chronicDiseases.map(cd => cd.chronicDisease?.name);
+    const totalCalories = calculateCalories(
       profile.currentWeight,
       profile.height,
       age,
       profile.gender,
       profile.activityLevel,
-      profile.goal
+      profile.goal,
+      userDiseases
     );
-
-    // Concept: Medical Modifiers (Logic only, no DB change)
-    let totalCalories = baseCalories;
-    const userDiseases = profile.chronicDiseases.map(cd => cd.chronicDisease?.name);
-
-    if (userDiseases.includes("السكري")) {
-      totalCalories = Math.round(totalCalories * 0.95); // Example: 5% reduction for metabolic safety
-    }
-    if (userDiseases.includes("ارتفاع ضغط الدم")) {
-      totalCalories = Math.round(totalCalories * 0.98);
-    }
 
     // 3. Set dates (default 7 days if not provided)
     const sDate = new Date(startDate);
