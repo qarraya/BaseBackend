@@ -140,7 +140,22 @@ export const getNutritionalRules = async (req, res) => {
 
     // Otherwise return all rules
     const rules = await prisma.nutritionalRule.findMany();
-    res.status(200).json({ success: true, rules });
+
+    // Comprehensive list of medical adjustments for the Frontend to display
+    const medicalAdjustmentsInfo = {
+      diabetes: "Diabetes (السكري): -5% Calories, -15% Carbs",
+      hypertension: "Hypertension (ضغط الدم): -2% Calories",
+      heartDisease: "Heart Disease (القلب): -4% Calories, -10% Fats",
+      cholesterol: "High Cholesterol (الكوليسترول): -3% Calories",
+      kidneyDisease: "Kidney Disease (الكلى): -6% Calories",
+      ibs: "IBS (القولون العصبي): -1% Calories"
+    };
+
+    res.status(200).json({
+      success: true,
+      rules,
+      medicalLogics: medicalAdjustmentsInfo
+    });
   } catch (error) {
     console.error("Error fetching nutritional rules:", error);
     res.status(500).json({ success: false, message: "Server error" });
