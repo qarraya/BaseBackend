@@ -102,17 +102,7 @@ export const generateUserPlan = async (userId, startDate = new Date(), endDate =
       return null;
     }
 
-    // 2. Calculate Personalized Total Calories (Based on specific body metrics)
-    const personalizedCalories = calculateCalories(
-      profile.currentWeight,
-      profile.height,
-      age,
-      profile.gender,
-      profile.activityLevel,
-      profile.goal
-    );
-
-    // 3. Fetch Nutritional Rule (To get the Admin's preferred Balance/Ratios)
+    // 2. Fetch Nutritional Rule (Admin's preferred Balance/Ratios)
     const rule = await prisma.nutritionalRule.findUnique({
       where: {
         gender_activityLevel_goal: {
@@ -123,19 +113,15 @@ export const generateUserPlan = async (userId, startDate = new Date(), endDate =
       }
     });
 
-    // 4. Hybrid Logic: Use personalized calories as TOTAL, but rule as the RATIO template
-    let totalCalories = personalizedCalories;
-
-    // In a graduate project, you can explain that if a rule exists, we use it to SCALE macros,
-    // ensuring the admin's nutritional strategy is followed while respecting the user's BMR.
-    if (rule && rule.calories > 0) {
-      // Logic: If admin says 2000 cal with 150g protein, we follow that 30% protein ratio
-      // regardless of the user's specific total calories.
-      // For now, the 'totalCalories' is the master number.
-      console.log(`[Smart Hybrid] Scaling Admin Rule (ID: ${rule.id}) to User's Personalized Calories (${totalCalories})`);
-    } else {
-      console.log(`[Automatic] No Admin Rule found. Using standard calculation for User ${userId}`);
-    }
+    // 3. Set Total Calories (Always personalized based on body metrics)
+    const totalCalories = calculateCalories(
+      profile.currentWeight,
+      profile.height,
+      age,
+      profile.gender,
+      profile.activityLevel,
+      profile.goal
+    );
 
     // 3. Set dates (default 7 days if not provided)
     const sDate = new Date(startDate);
