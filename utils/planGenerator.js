@@ -70,26 +70,38 @@ export const calculateCalories = (weight, height, age, gender, activityLevel, go
   else if (gl === "GAIN") calories = maintenanceCalories + 500;
 
   // 3. INTERNAL MEDICAL LOGIC (Behind the scenes)
-  // These adjustments are applied automatically based on the user's profile diseases
+  // Comprehensive mapping for the 10 specific diseases
   const diseaseNames = Array.isArray(diseases) ? diseases.map(d => d.name || d) : [];
 
   if (diseaseNames.includes("السكري")) {
-    calories *= 0.95; // 5% reduction for metabolic safety
+    calories *= 0.95;
   }
   if (diseaseNames.includes("ارتفاع ضغط الدم")) {
-    calories *= 0.98; // 2% reduction
+    calories *= 0.98;
   }
   if (diseaseNames.includes("أمراض القلب")) {
-    calories *= 0.96; // 4% reduction
+    calories *= 0.96;
+  }
+  if (diseaseNames.includes("اضطرابات الغدة الدرقية")) {
+    calories *= 0.95;
+  }
+  if (diseaseNames.includes("الربو")) {
+    calories *= 0.99;
   }
   if (diseaseNames.includes("ارتفاع الكوليسترول")) {
-    calories *= 0.97; // 3% reduction
+    calories *= 0.97;
+  }
+  if (diseaseNames.includes("فقر الدم")) {
+    calories *= 1.0; // Maintenance with nutrient focus
   }
   if (diseaseNames.includes("أمراض الكلى المزمنة")) {
-    calories *= 0.94; // 6% reduction (conservative)
+    calories *= 0.94;
   }
-  if (diseaseNames.includes("القولون العصبي")) {
-    calories *= 0.99; // Minimal reduction, focus is on meal types
+  if (diseaseNames.includes("أمراض الكبد المزمنة")) {
+    calories *= 0.94;
+  }
+  if (diseaseNames.includes("أمراض الروماتيزم المزمنة")) {
+    calories *= 0.97;
   }
 
   return Math.round(calories);

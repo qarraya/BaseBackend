@@ -143,12 +143,16 @@ export const getNutritionalRules = async (req, res) => {
 
     // Comprehensive list of medical adjustments for the Frontend to display
     const medicalAdjustmentsInfo = {
-      diabetes: "Diabetes (السكري): -5% Calories, -15% Carbs",
-      hypertension: "Hypertension (ضغط الدم): -2% Calories",
-      heartDisease: "Heart Disease (القلب): -4% Calories, -10% Fats",
-      cholesterol: "High Cholesterol (الكوليسترول): -3% Calories",
-      kidneyDisease: "Kidney Disease (الكلى): -6% Calories",
-      ibs: "IBS (القولون العصبي): -1% Calories"
+      diabetes: "السكري: -5% Calories",
+      hypertension: "ارتفاع ضغط الدم: -2% Calories",
+      heartDisease: "أمراض القلب: -4% Calories",
+      thyroid: "اضطرابات الغدة الدرقية: -5% Calories",
+      asthma: "الربو: -1% Calories",
+      cholesterol: "ارتفاع الكوليسترول: -3% Calories",
+      anemia: "فقر الدم: nutrient-focused",
+      kidneyDisease: "أمراض الكلى المزمنة: -6% Calories",
+      liverDisease: "أمراض الكبد المزمنة: -6% Calories",
+      rheumatism: "أمراض الروماتيزم المزمنة: -3% Calories"
     };
 
     res.status(200).json({
