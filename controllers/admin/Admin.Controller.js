@@ -14,6 +14,7 @@ const adminPublic = (a) => ({
   email: a.email,
   isActive: a.isActive ?? true,
   lastLogin: a.lastLogin,
+  lastPasswordChange: a.lastPasswordChange,
   createdAt: a.createdAt,
 });
 
@@ -82,7 +83,10 @@ export const updateAdminProfile = async (req, res) => {
     if (name) data.name = name.trim();
     if (username) data.username = username.trim();
     if (email) data.email = email.trim().toLowerCase();
-    if (password) data.password = await bcrypt.hash(password, 10);
+    if (password) {
+      data.password = await bcrypt.hash(password, 10);
+      data.lastPasswordChange = new Date();
+    }
     const admin = await prisma.admin.update({ where: { id }, data });
     return res.status(200).json({ success: true, message: "Profile updated.", admin: adminPublic(admin) });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
@@ -143,16 +147,16 @@ export const getNutritionalRules = async (req, res) => {
 
     // Comprehensive list of medical adjustments for the Frontend to display
     const medicalAdjustmentsInfo = {
-      diabetes: "السكري: -5% Calories",
-      hypertension: "ارتفاع ضغط الدم: -2% Calories",
-      heartDisease: "أمراض القلب: -4% Calories",
-      thyroid: "اضطرابات الغدة الدرقية: -5% Calories",
+      diabetes: "السكري: -2% Calories",
+      hypertension: "ارتفاع ضغط الدم: -1% Calories",
+      heartDisease: "أمراض القلب: -5% Calories",
+      thyroid: "اضطرابات الغدة الدرقية: -4% Calories",
       asthma: "الربو: -1% Calories",
-      cholesterol: "ارتفاع الكوليسترول: -3% Calories",
-      anemia: "فقر الدم: nutrient-focused",
-      kidneyDisease: "أمراض الكلى المزمنة: -6% Calories",
+      cholesterol: "ارتفاع الكوليسترول: -2% Calories",
+      anemia: "فقر الدم: -1% Calories",
+      kidneyDisease: "أمراض الكلى المزمنة: -7% Calories",
       liverDisease: "أمراض الكبد المزمنة: -6% Calories",
-      rheumatism: "أمراض الروماتيزم المزمنة: -3% Calories"
+      rheumatism: "أمراض الروماتيزم المزمنة: -2% Calories"
     };
 
     res.status(200).json({
