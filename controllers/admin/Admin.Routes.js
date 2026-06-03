@@ -2,6 +2,7 @@ import express from "express";
 import {
   adminLogin,
   adminRegister,
+  getAdminProfile,
   updateAdminProfile,
   logoutAllSessions,
   toggleAdminActiveStatus,
@@ -24,6 +25,7 @@ const router = express.Router();
 // Auth & Comprehensive Account Settings
 router.post("/auth/login", adminLogin);
 router.post("/register", adminRegister);
+router.get("/profile/:id", verifyAdmin, getAdminProfile);
 router.put("/profile/:id", verifyAdmin, updateAdminProfile);
 
 // Advanced Security Actions
