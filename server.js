@@ -110,6 +110,16 @@ app.get("/", (req, res) => {
 });
 
 /* =========================
+   GLOBAL 404 HANDLER
+========================= */
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: `Route Not Found: ${req.method} ${req.originalUrl}`
+  });
+});
+
+/* =========================
    GLOBAL ERROR HANDLER
 ========================= */
 

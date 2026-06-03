@@ -3,8 +3,10 @@ import {
   adminLogin,
   adminRegister,
   getAdminProfile,
+  getCurrentAdminProfile,
   updateAdminProfile,
   logoutAllSessions,
+  adminLogout,
   toggleAdminActiveStatus,
   getAdminStats,
   listAllQuestions,
@@ -25,12 +27,17 @@ const router = express.Router();
 // Auth & Comprehensive Account Settings
 router.post("/auth/login", adminLogin);
 router.post("/register", adminRegister);
+router.get("/profile", verifyAdmin, getCurrentAdminProfile);
 router.get("/profile/:id", verifyAdmin, getAdminProfile);
 router.put("/profile/:id", verifyAdmin, updateAdminProfile);
 
 // Advanced Security Actions
+router.post("/logout", verifyAdmin, adminLogout);
+router.post("/auth/logout", verifyAdmin, adminLogout);
 router.post("/logout-all", verifyAdmin, logoutAllSessions); // Self logout
 router.post("/logout-all/:id", verifyAdmin, logoutAllSessions); // Logout another admin
+router.post("/toggle-status", verifyAdmin, toggleAdminActiveStatus); // self
+router.patch("/toggle-status", verifyAdmin, toggleAdminActiveStatus); // self
 router.patch("/toggle-status/:id", verifyAdmin, toggleAdminActiveStatus);
 
 // Nutritional Rules (The "Brain")

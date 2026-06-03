@@ -47,7 +47,7 @@ export const adminLogin = async (req, res) => {
       return res.status(403).json({ message: "Account is inactive." });
     }
 
-    await prisma.admin.update({
+    const updatedAdmin = await prisma.admin.update({
       where: { id: admin.id },
       data: { lastLogin: new Date() }
     });
@@ -55,8 +55,8 @@ export const adminLogin = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Login successful.",
-      token: signAdminToken(admin),
-      admin: adminPublic(admin)
+      token: signAdminToken(updatedAdmin),
+      admin: adminPublic(updatedAdmin)
     });
   } catch (error) {
     console.error("Login Error:", error);
@@ -79,6 +79,14 @@ export const getAdminProfile = async (req, res) => {
   try {
     const { id } = req.params;
     const admin = await prisma.admin.findUnique({ where: { id } });
+    if (!admin) return res.status(404).json({ success: false, message: "Admin not found" });
+    return res.status(200).json({ success: true, admin: adminPublic(admin) });
+  } catch (error) { res.status(500).json({ message: "Server error" }); }
+};
+
+export const getCurrentAdminProfile = async (req, res) => {
+  try {
+    const admin = await prisma.admin.findUnique({ where: { id: req.user.id } });
     if (!admin) return res.status(404).json({ success: false, message: "Admin not found" });
     return res.status(200).json({ success: true, admin: adminPublic(admin) });
   } catch (error) { res.status(500).json({ message: "Server error" }); }
@@ -117,12 +125,17 @@ export const logoutAllSessions = async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
 };
 
+export const adminLogout = (req, res) => {
+  res.status(200).json({ success: true, message: "Logged out successfully." });
+};
+
 export const toggleAdminActiveStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const admin = await prisma.admin.findUnique({ where: { id } });
+    const targetId = id || req.user.id;
+    const admin = await prisma.admin.findUnique({ where: { id: targetId } });
     const updated = await prisma.admin.update({
-      where: { id },
+      where: { id: targetId },
       data: { isActive: !admin.isActive, tokenVersion: { increment: 1 } }
     });
     res.status(200).json({ success: true, message: `Admin ${updated.isActive ? 'activated' : 'deactivated'}.`, isActive: updated.isActive });
@@ -254,6 +267,38 @@ export const toggleUserSubscription = async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     const updatedUser = await prisma.user.update({ where: { id: userId }, data: { isSubscribed: !user.isSubscribed, subscriptionEndDate: !user.isSubscribed ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null } });
     res.status(200).json({ success: true, message: "Subscription toggled.", user: updatedUser });
+  } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
+};
+
+export const getUserProgressAsAdmin = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, username: true, email: true, profile: { select: { currentWeight: true, targetWeight: true, goal: true, height: true } } }
+    });
+
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    // Get progress history
+    const history = await prisma.progress.findMany({
+      where: { userId },
+      orderBy: { date: "asc" }
+    });
+
+    res.status(200).json({
+      success: true,
+      user,
+      history: history.map(h => ({
+        id: h.id,
+        date: h.date,
+        newWeight: h.newWeight,
+        previousWeight: h.previousWeight,
+        weightChange: Number(h.newWeight) - Number(h.previousWeight)
+      }))
+    });
   } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
 };
 
