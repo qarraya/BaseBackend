@@ -12,9 +12,12 @@ const adminPublic = (a) => ({
   username: a.username,
   name: a.name,
   email: a.email,
-  isActive: a.isActive ?? true,
   lastLogin: a.lastLogin,
+  last_login: a.lastLogin,
+  lastLoginDate: a.lastLogin,
   lastPasswordChange: a.lastPasswordChange,
+  last_password_change: a.lastPasswordChange,
+  lastPasswordChangeDate: a.lastPasswordChange,
   createdAt: a.createdAt,
 });
 
