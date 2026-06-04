@@ -216,7 +216,8 @@ export const getAdminStats = async (req, res) => {
     const totalUsers = await prisma.user.count();
     const activeSubscribers = await prisma.user.count({ where: { isSubscribed: true } });
     const pendingQuestions = await prisma.question.count({ where: { status: "PENDING" } });
-    res.status(200).json({ success: true, stats: { totalUsers, activeSubscribers, pendingQuestions } });
+    const totalAdmins = await prisma.admin.count();
+    res.status(200).json({ success: true, stats: { totalUsers, activeSubscribers, pendingQuestions, totalAdmins } });
   } catch (error) { res.status(500).json({ success: false, message: "Server error" }); }
 };
 
