@@ -38,15 +38,15 @@ export function isInTrialPeriod(user) {
   // If inTrial is false but trialStartDate exists, it might mean it's expired or logic error.
   // We want to be inclusive: if they have a start date and haven't finished 30 days, they are in trial.
   if (!user?.trialStartDate) return false;
-  
+
   const now = new Date();
   const trialStartDate = new Date(user.trialStartDate);
   const trialEndDate = new Date(trialStartDate);
-  
+
   // Use trialDaysRemaining from DB or default to 30
   const days = user.trialDaysRemaining ?? 30;
   trialEndDate.setDate(trialEndDate.getDate() + days);
-  
+
   return now < trialEndDate;
 }
 
@@ -72,8 +72,8 @@ export function evaluatePlanGenerationFromUserRow(user) {
   if (user.freePlansCount > 0) {
     return { allowed: true, reason: PLAN_GEN_REASON.FREE_PLAN };
   }
-  return { 
-    allowed: false, 
+  return {
+    allowed: false,
     reason: PLAN_GEN_REASON.SUBSCRIPTION_REQUIRED,
     messageAr: user.subscriptionEndDate ? SUBSCRIPTION_EXPIRED_MESSAGE_AR : FREE_TRIAL_EXHAUSTED_MESSAGE_AR
   };
@@ -277,7 +277,8 @@ export async function getSubscriptionStatusForClient(userId) {
   const hasActiveSubscription = hasActiveSubscriptionWindow(row);
   const inTrial = isInTrialPeriod(row);
   const freePlansRemaining = row.freePlansCount;
-  const canGenerateAgain = hasActiveSubscription || inTrial || freePlansRemaining > 0;
+  /** Access is granted if: Subscribed OR in 30-day trial OR a new user who hasn't used trial yet and has credits. */
+  const canGenerateAgain = hasActiveSubscription || inTrial || (!row.trialStartDate && freePlansRemaining > 0);
 
   /** Had an end date set and it is no longer in the future (subscription “period” over). */
   const subscriptionWindowExpired =
@@ -287,9 +288,9 @@ export async function getSubscriptionStatusForClient(userId) {
   const needsSubscriptionToGenerate = !canGenerateAgain;
 
   /** Banner for plan screen: first month free while user still has trial credit and no active sub. */
-  const planPageMessageAr = hasActiveSubscription 
-    ? THANK_YOU_SUBSCRIBER_MESSAGE_AR 
-    : (inTrial || freePlansRemaining > 0 ? FIRST_MONTH_FREE_MESSAGE_AR : null);
+  const planPageMessageAr = hasActiveSubscription
+    ? THANK_YOU_SUBSCRIBER_MESSAGE_AR
+    : (!row.trialStartDate ? FIRST_MONTH_FREE_MESSAGE_AR : (freePlansRemaining > 0 ? "لديك خطط مجانية متبقية" : null));
 
   const trialStartDate = row.trialStartDate;
   let trialEndDate = null;
@@ -312,10 +313,10 @@ export async function getSubscriptionStatusForClient(userId) {
     trialDaysRemaining,
     subscriptionWindowExpired,
     canGenerateAgain,
-    isTrialAvailable: !hasActiveSubscription && !inTrial && freePlansRemaining > 0, // New flag
+    isTrialAvailable: !row.trialStartDate && !hasActiveSubscription,
     needsSubscriptionToGenerate,
-    messageAr: needsSubscriptionToGenerate 
-      ? (row.subscriptionEndDate ? SUBSCRIPTION_EXPIRED_MESSAGE_AR : FREE_TRIAL_EXHAUSTED_MESSAGE_AR) 
+    messageAr: needsSubscriptionToGenerate
+      ? (row.subscriptionEndDate ? SUBSCRIPTION_EXPIRED_MESSAGE_AR : FREE_TRIAL_EXHAUSTED_MESSAGE_AR)
       : null,
     planPageMessageAr,
   };
