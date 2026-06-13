@@ -8,12 +8,11 @@ export function computeWeightDelta(newWeight, previousWeight) {
 }
 
 /**
- * Persist a progress row (called when weight or body fat is set or changes on the profile).
+ * Persist a progress row (called when weight is set or changes on the profile).
  */
-export async function recordProgressSnapshot(userId, { newWeight, previousWeight, newBodyFat, previousBodyFat }) {
+export async function recordWeightSnapshot(userId, newWeight, previousWeight) {
   const nw = Number(newWeight);
   const pw = Number(previousWeight);
-
   if (Number.isNaN(nw) || Number.isNaN(pw)) {
     throw new Error("newWeight and previousWeight must be valid numbers");
   }
@@ -23,17 +22,8 @@ export async function recordProgressSnapshot(userId, { newWeight, previousWeight
       userId,
       newWeight: nw,
       previousWeight: pw,
-      newBodyFat: newBodyFat ? Number(newBodyFat) : undefined,
-      previousBodyFat: previousBodyFat ? Number(previousBodyFat) : undefined,
     },
   });
-}
-
-/**
- * Migration helper / Legacy support for old calls
- */
-export async function recordWeightSnapshot(userId, newWeight, previousWeight) {
-  return recordProgressSnapshot(userId, { newWeight, previousWeight });
 }
 
 /**
@@ -54,8 +44,5 @@ export async function getUserProgressHistory(userId, options = {}) {
     newWeight: row.newWeight,
     previousWeight: row.previousWeight,
     weightChange: computeWeightDelta(row.newWeight, row.previousWeight),
-    newBodyFat: row.newBodyFat,
-    previousBodyFat: row.previousBodyFat,
-    bodyFatChange: row.newBodyFat && row.previousBodyFat ? Number((row.newBodyFat - row.previousBodyFat).toFixed(1)) : 0
   }));
 }

@@ -84,20 +84,17 @@ export const getProgressDashboard = async (req, res) => {
 
     let carbsAvg = 45; // Default fallback
     let proteinAvg = 30; // Default fallback
-    let fatsAvg = 25; // Default fallback
     let planTotalCalories = activePlan ? activePlan.totalCalories : 1934;
 
     if (activePlan && activePlan.meals.length > 0) {
       let totalCarbsGrams = 0;
       let totalProteinGrams = 0;
-      let totalFatsGrams = 0;
       let totalPlanCals = 0;
 
       activePlan.meals.forEach(pm => {
         const mult = pm.multiplier || 1.0;
         totalCarbsGrams += (pm.meal.carbs || 0) * mult;
         totalProteinGrams += (pm.meal.proteins || 0) * mult;
-        totalFatsGrams += (pm.meal.fats || 0) * mult;
         totalPlanCals += (pm.meal.calories || 0) * mult;
       });
 
@@ -106,7 +103,6 @@ export const getProgressDashboard = async (req, res) => {
         // Protein/Carbs: 4 cal/g, Fat: 9 cal/g
         carbsAvg = Math.round((totalCarbsGrams * 4 / totalPlanCals) * 100);
         proteinAvg = Math.round((totalProteinGrams * 4 / totalPlanCals) * 100);
-        fatsAvg = Math.round((totalFatsGrams * 9 / totalPlanCals) * 100);
 
         planTotalCalories = Math.round(totalPlanCals / Math.max(1, activePlan.meals.length / 3)); // Approximate daily avg if multi-day
 
@@ -150,7 +146,6 @@ export const getProgressDashboard = async (req, res) => {
           lostWeight: Math.abs(monthChange),
           carbsAvg: carbsAvg,
           proteinAvg: proteinAvg,
-          fatsAvg: fatsAvg,
           startDate: history.length > 0 ? history[0].date : startOfMonth,
           endDate: now,
         },

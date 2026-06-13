@@ -14,8 +14,6 @@ export const createProfile = async (req, res) => {
       height,
       currentWeight,
       targetWeight,
-      bodyFat,
-      targetBodyFat,
       goal,
       activityLevel,
       chronicDiseasesIds,
@@ -41,8 +39,6 @@ export const createProfile = async (req, res) => {
       height: Number(height),
       currentWeight: Number(currentWeight),
       targetWeight: targetWeight ? Number(targetWeight) : undefined,
-      bodyFat: bodyFat ? Number(bodyFat) : undefined,
-      targetBodyFat: targetBodyFat ? Number(targetBodyFat) : undefined,
       goal,
       activityLevel,
     };
@@ -98,33 +94,16 @@ export const createProfile = async (req, res) => {
       },
     });
 
-    /* ------------------ Progress tracking (weight & body fat) ------------------ */
+    /* ------------------ Progress tracking (weight) ------------------ */
     try {
       if (!priorProfile) {
-        await progressService.recordProgressSnapshot(userId, {
-          newWeight: newWeightVal,
-          previousWeight: newWeightVal,
-          newBodyFat: newBodyFatVal,
-          previousBodyFat: newBodyFatVal
-        });
+        await progressService.recordWeightSnapshot(userId, newWeightVal, newWeightVal);
       } else if (priorProfile.currentWeight == null) {
-        await progressService.recordProgressSnapshot(userId, {
-          newWeight: newWeightVal,
-          previousWeight: newWeightVal,
-          newBodyFat: newBodyFatVal,
-          previousBodyFat: priorProfile.bodyFat ?? newBodyFatVal
-        });
+        await progressService.recordWeightSnapshot(userId, newWeightVal, newWeightVal);
       } else {
-        const prevW = Number(priorProfile.currentWeight);
-        const prevBF = priorProfile.bodyFat ? Number(priorProfile.bodyFat) : undefined;
-
-        if (newWeightVal !== prevW || (newBodyFatVal !== undefined && newBodyFatVal !== prevBF)) {
-          await progressService.recordProgressSnapshot(userId, {
-            newWeight: newWeightVal,
-            previousWeight: prevW,
-            newBodyFat: newBodyFatVal ?? prevBF,
-            previousBodyFat: prevBF
-          });
+        const prev = Number(priorProfile.currentWeight);
+        if (newWeightVal !== prev) {
+          await progressService.recordWeightSnapshot(userId, newWeightVal, prev);
         }
       }
     } catch (progressErr) {
@@ -226,8 +205,6 @@ export const updateProfile = async (req, res) => {
       height,
       currentWeight,
       targetWeight,
-      bodyFat,
-      targetBodyFat,
       goal,
       activityLevel,
       chronicDiseasesIds,
@@ -247,8 +224,6 @@ export const updateProfile = async (req, res) => {
       height: height ? Number(height) : undefined,
       currentWeight: currentWeight ? Number(currentWeight) : undefined,
       targetWeight: targetWeight ? Number(targetWeight) : undefined,
-      bodyFat: bodyFat ? Number(bodyFat) : undefined,
-      targetBodyFat: targetBodyFat ? Number(targetBodyFat) : undefined,
       goal,
       activityLevel,
     };
@@ -267,20 +242,18 @@ export const updateProfile = async (req, res) => {
       };
     }
 
-    if (currentWeight !== undefined || bodyFat !== undefined) {
+    if (currentWeight !== undefined && currentWeight !== null) {
       try {
-        const newW = currentWeight !== undefined ? Number(currentWeight) : Number(existing.currentWeight);
-        const oldW = Number(existing.currentWeight);
-        const newBF = bodyFat !== undefined ? Number(bodyFat) : (existing.bodyFat ? Number(existing.bodyFat) : undefined);
-        const oldBF = existing.bodyFat ? Number(existing.bodyFat) : undefined;
-
-        if (newW !== oldW || (newBF !== undefined && newBF !== oldBF)) {
-          await progressService.recordProgressSnapshot(existing.userId, {
-            newWeight: newW,
-            previousWeight: oldW,
-            newBodyFat: newBF ?? oldBF,
-            previousBodyFat: oldBF
-          });
+        const newW = Number(currentWeight);
+        if (!Number.isNaN(newW)) {
+          if (existing.currentWeight == null) {
+            await progressService.recordWeightSnapshot(existing.userId, newW, newW);
+          } else {
+            const oldW = Number(existing.currentWeight);
+            if (!Number.isNaN(oldW) && newW !== oldW) {
+              await progressService.recordWeightSnapshot(existing.userId, newW, oldW);
+            }
+          }
         }
       } catch (progressErr) {
         console.error("Progress record on profile update failed:", progressErr);
@@ -358,8 +331,6 @@ export const updateMyProfile = async (req, res) => {
       height,
       currentWeight,
       targetWeight,
-      bodyFat,
-      targetBodyFat,
       goal,
       activityLevel,
       chronicDiseasesIds,
@@ -381,8 +352,6 @@ export const updateMyProfile = async (req, res) => {
       height: height ? Number(height) : undefined,
       currentWeight: currentWeight ? Number(currentWeight) : undefined,
       targetWeight: targetWeight ? Number(targetWeight) : undefined,
-      bodyFat: bodyFat ? Number(bodyFat) : undefined,
-      targetBodyFat: targetBodyFat ? Number(targetBodyFat) : undefined,
       goal,
       activityLevel,
     };
@@ -399,20 +368,18 @@ export const updateMyProfile = async (req, res) => {
     }
 
     // Progress record logic
-    if (currentWeight !== undefined || bodyFat !== undefined) {
+    if (currentWeight !== undefined && currentWeight !== null) {
       try {
-        const newW = currentWeight !== undefined ? Number(currentWeight) : Number(existing.currentWeight);
-        const oldW = Number(existing.currentWeight);
-        const newBF = bodyFat !== undefined ? Number(bodyFat) : (existing.bodyFat ? Number(existing.bodyFat) : undefined);
-        const oldBF = existing.bodyFat ? Number(existing.bodyFat) : undefined;
-
-        if (newW !== oldW || (newBF !== undefined && newBF !== oldBF)) {
-          await progressService.recordProgressSnapshot(userId, {
-            newWeight: newW,
-            previousWeight: oldW,
-            newBodyFat: newBF ?? oldBF,
-            previousBodyFat: oldBF
-          });
+        const newW = Number(currentWeight);
+        if (!Number.isNaN(newW)) {
+          if (existing.currentWeight == null) {
+            await progressService.recordWeightSnapshot(userId, newW, newW);
+          } else {
+            const oldW = Number(existing.currentWeight);
+            if (!Number.isNaN(oldW) && newW !== oldW) {
+              await progressService.recordWeightSnapshot(userId, newW, oldW);
+            }
+          }
         }
       } catch (progressErr) {
         console.error("Progress record on profile update failed:", progressErr);

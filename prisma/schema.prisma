@@ -122,8 +122,6 @@ model Profile {
   height          Float?
   currentWeight   Float?
   targetWeight    Float?
-  bodyFat         Float?
-  targetBodyFat   Float?
   goal            Goal?
   activityLevel   ActivityLevelEnum?
   chronicDiseases ProfileChronicDiseases[]
@@ -234,11 +232,9 @@ model PlanMeal {
 
 model Progress {
   id             String   @id @default(uuid())
-  newWeight       Float
-  previousWeight  Float
-  newBodyFat      Float?
-  previousBodyFat Float?
-  date            DateTime @default(now())
+  newWeight      Float
+  previousWeight Float
+  date           DateTime @default(now())
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
